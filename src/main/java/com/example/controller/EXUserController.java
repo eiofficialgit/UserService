@@ -23,7 +23,9 @@ import com.example.entity.EXUser;
 import com.example.entity.LoginRequest;
 import com.example.entity.Partnership;
 import com.example.entity.ResponseBean;
+import com.example.entity.ResponseBean1;
 import com.example.entity.WebsiteBean;
+import com.example.repository.Authenticaterepo;
 import com.example.repository.EXUserRepository;
 import com.example.repository.WebsiteBeanRepository;
 
@@ -34,6 +36,8 @@ public class EXUserController {
 	@Autowired
 	private EXUserRepository userRepo;
 
+	@Autowired
+	private Authenticaterepo authenticaterepo;
 	@Autowired
 	private WebsiteBeanRepository webRepo;
 
@@ -322,8 +326,31 @@ public class EXUserController {
 		return child;
 	}
 
+	
+	
+	
 	@PostMapping("/managementHome")
-	public String managementHome(@RequestBody EXUser login) {
+	public ResponseEntity<ResponseBean1> managementHome(@RequestBody LoginRequest login) {
+		
+    LoginRequest usersse = authenticaterepo.findByUserid(login.getUserid());
+		//user name null or wrong
+		if(usersse==null) {
+			ResponseBean1 reponsebean=ResponseBean1.builder().title(null).type("give correct name").message(null).build();
+		return new ResponseEntity<ResponseBean1>(reponsebean, HttpStatus.UNAUTHORIZED);
+		}
+		
+		//user password null or wrong
+		if(!usersse.getPassword().equals(login.getPassword())) {
+			ResponseBean1 reponsebean=ResponseBean1.builder().title(null).type("give correct password").message("fghjk").build();
+		return new ResponseEntity<ResponseBean1>(reponsebean, HttpStatus.UNAUTHORIZED);
+		}
+		
+		
+		//sucess case
+		ResponseBean1 reponsebean=ResponseBean1.builder().title(null).type("sucess").message("dfghj").build();
+		return new ResponseEntity<ResponseBean1>(reponsebean, HttpStatus.OK);
+	}
+	
 
 		// String host = req.getHeader("host");
 		// ModelAndView model = new ModelAndView();
@@ -334,13 +361,25 @@ public class EXUserController {
 		// FirebaseDatabase firebaseDatabase = null;
 		// Calendar calendar = new GregorianCalendar();
 		// TimeZone timeZone = calendar.getTimeZone();
-		ResponseBean rbean = new ResponseBean();
+		//ResponseBean rbean = new ResponseBean();
 		// String ipaddress = login.getAdminId();
-		// Boolean isLoginValid = false;
-		if (login.getUserid() != null && login.getPassword() != null) {
-			Object user = userRepo.findByUseridAndPasswordAndIsActive(login.getUserid().toLowerCase(),
-					login.getPassword(), true);
-		} else {
+		/*
+		 * // Boolean isLoginValid = false; LoginRequest findByUsersId =
+		 * userRepo.findByUsersId(login.getUserid());
+		 * 
+		 * if(findByUsersId==null) { return
+		 * ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new
+		 * ResponseBean("error","UserId and password required","Management login")); }
+		 * 
+		 * if(findByUsersId!=null &&
+		 * findByUsersId.getPassword().equals(login.getPassword())) { return
+		 * ResponseEntity.ok(new
+		 * ResponseBean("Success","Login successful!","Management login")); }
+		 * 
+		 * //sucess ResponseBean reponsebean=ResponseBean.builder().message(sucess fully
+		 * login).ty }
+		 */
+	
 			// rbean.setMessage("Please Fill All The Credential");
 			// rbean.setType("error");
 			// rbean.setTitle("Oops...");
@@ -350,11 +389,10 @@ public class EXUserController {
 			// }else{
 			// model.setViewName("Alogin");
 			// }
-			return " !!";
-		}
-		SimpleDateFormat dateFormater = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		SimpleDateFormat loginFormater = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-		StringBuilder sb = new StringBuilder();
+			
+//		SimpleDateFormat dateFormater = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+//		SimpleDateFormat loginFormater = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+//		StringBuilder sb = new StringBuilder();
 
 		// if(user!=null)
 		// {
@@ -485,9 +523,9 @@ public class EXUserController {
 		// model.setViewName("Alogin");
 		// }
 		// }
-
-		return "Login Success!!!";
-	}
+	
+		
+	
 
 	@PostMapping("/website")
 	public ResponseEntity<ResponseBean> saveWebsite(@RequestBody WebsiteBean website) {
