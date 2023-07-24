@@ -1,6 +1,6 @@
 package com.example.controller;
 
-import java.text.SimpleDateFormat; 
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,26 +11,29 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.ModelAndView;
 
 import com.example.entity.EXUser;
-import com.example.entity.LoginRequest;
 import com.example.entity.Partnership;
 import com.example.entity.ResponseBean;
 import com.example.entity.ResponseBean1;
+import com.example.entity.UserStake;
 import com.example.entity.WebsiteBean;
 import com.example.repository.Authenticaterepo;
 import com.example.repository.EXUserRepository;
 import com.example.repository.WebsiteBeanRepository;
 
+import jakarta.servlet.http.HttpSession;
+
 @RestController
 @RequestMapping("/exuser")
+@CrossOrigin("*")
 public class EXUserController {
 
 	@Autowired
@@ -38,8 +41,12 @@ public class EXUserController {
 
 	@Autowired
 	private Authenticaterepo authenticaterepo;
+	
 	@Autowired
 	private WebsiteBeanRepository webRepo;
+	
+	@Autowired
+	private HttpSession httpSession;
 
 	String regex = "^(?=.*[0-9])" + "(?=.*[a-z])(?=.*[A-Z])" + "(?=\\S+$).{8,15}$";
 
@@ -71,7 +78,7 @@ public class EXUserController {
 				response.put("message",
 						"Password Must contains 1 Upper Case, 1 Lowe Case & 1 Numeric Value & in Between 8-15 Charachter");
 				return CompletableFuture.completedFuture(response);
-			} else if (parent.getMobileNumber().length() > 10) {
+			} else if (parent.getMobileNumber() == null || parent.getMobileNumber().length() > 10) {
 				response.put("type", "error");
 				response.put("message", "Mobile Number Must Be Of 10 Digit or Balnk");
 				return CompletableFuture.completedFuture(response);
@@ -83,6 +90,12 @@ public class EXUserController {
 //					response.put("type","error");
 //					response.put("message","Invalid Commission");
 //					return CompletableFuture.completedFuture(response);
+			}else if (parent.getFirstName() == null || parent.getFirstName().isEmpty()) {
+					response.put("type", "error");
+					response.put("message", "Enter FirstName");
+				} else if (parent.getLastName() == null || parent.getLastName().isEmpty()) {
+					response.put("type", "error");
+					response.put("message", "Enter LastName");
 			} else if (parent.getTimeZone().equalsIgnoreCase(null) || parent.getTimeZone().equalsIgnoreCase("")) {
 				response.put("type", "error");
 				response.put("message", "Invalid TimeZone");
@@ -116,8 +129,12 @@ public class EXUserController {
 		ResponseBean responseBean = new ResponseBean();
 //				EXUser usersession = (EXUser) session.getAttribute("user");
 //				JSONObject userData = new JSONObject(requestData);
+		
+		
+		EXUser requestData1 = (EXUser) httpSession.getAttribute("EXUser");
+		
 		try {
-			EXUser checkUser = userRepo.findByUserid(requestData.getUserid().toLowerCase());
+			EXUser checkUser = userRepo.findByUserid(((EXUser) requestData1).getUserid().toLowerCase());
 			ArrayList isValidUser = new ArrayList<>();
 
 			CompletableFuture<HashMap<String, String>> conditions = validateUserConditions(requestData);
@@ -134,7 +151,7 @@ public class EXUserController {
 				responseBean.setTitle("Error");
 				return new ResponseEntity<Object>(responseBean, HttpStatus.ACCEPTED);
 			}
-			if (requestData.getUsertype() == 0) {
+			if (((EXUser) requestData1).getUsertype() == 0) {
 //							WebsiteBean webbean = new WebsiteBean();
 //							WebsiteBean web = webRepo.findByid(webbean.getId());
 //							if(web == null){
@@ -160,7 +177,7 @@ public class EXUserController {
 					responseBean.setTitle("Success");
 					return new ResponseEntity<Object>(responseBean, HttpStatus.OK);
 				}
-			} else if (requestData.getUsertype() == 1) {
+			} else if (((EXUser) requestData1).getUsertype() == 1) {
 				requestData = saveMiniAdmin(requestData);
 				if (requestData.getUserid() != null) {
 					userRepo.save(requestData);
@@ -169,7 +186,44 @@ public class EXUserController {
 					responseBean.setTitle("Success");
 					return new ResponseEntity<Object>(responseBean, HttpStatus.OK);
 				}
+			}else if(((EXUser) requestData1).getUsertype() == 2){
+				checkUser = saveSuperSuper(requestData);
+				if(checkUser.getUserid()!=null){
+					userRepo.save(checkUser);
+					responseBean.setType("success");
+					responseBean.setMessage("Success");
+					responseBean.setTitle("Success");
+					return new ResponseEntity<Object>(responseBean,HttpStatus.OK);
+				}
+			}else if(((EXUser) requestData1).getUsertype() == 3){
+				checkUser = saveSuperMaster(requestData);
+				if(checkUser.getUserid()!=null){
+					userRepo.save(checkUser);
+					responseBean.setType("success");
+					responseBean.setMessage("Success");
+					responseBean.setTitle("Success");
+					return new ResponseEntity<Object>(responseBean,HttpStatus.OK);
+				}
+			}else if(((EXUser) requestData1).getUsertype() == 4){
+				checkUser = saveMaster(requestData);
+				if(checkUser.getUserid()!=null){
+					userRepo.save(checkUser);
+					responseBean.setType("success");
+					responseBean.setMessage("Success");
+					responseBean.setTitle("Success");
+					return new ResponseEntity<Object>(responseBean,HttpStatus.OK);
+				}
+			}else if(((EXUser) requestData1).getUsertype() == 5){
+				checkUser = saveUser(requestData);
+				if(checkUser.getUserid()!=null){
+					userRepo.save(checkUser);
+					responseBean.setType("success");
+					responseBean.setMessage("Success");
+					responseBean.setTitle("Success");
+					return new ResponseEntity<Object>(responseBean,HttpStatus.OK);
+				}
 			}
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -181,7 +235,10 @@ public class EXUserController {
 
 	}
 
-	public EXUser saveSubAdmin(EXUser parent) {
+	public EXUser saveSubAdmin(EXUser user) {
+		
+		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		
 		EXUser child = new EXUser();
 		try {
 
@@ -189,9 +246,9 @@ public class EXUserController {
 			// Date()), "GMT", "IST")));
 			// child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
 			// Date()), "GMT", "IST")));
-			child.setUsername(parent.getUsername());
-			child.setUserid(parent.getUserid());
-			child.setPassword(parent.getPassword());
+			child.setUsername(user.getUsername());
+			child.setUserid(user.getUserid());
+			child.setPassword(user.getPassword());
 			child.setUsertype(1);
 			// child.setAccType(EXConstants.SUB_ADMIN);
 			child.setAccountLock(false);
@@ -226,12 +283,12 @@ public class EXUserController {
 			// child.setWebsiteId(userData.getString("websiteId"));
 			// child.setWebsiteName(userData.getString("websiteName"));
 			child.setSubChild("0");
-			child.setMobileNumber(parent.getMobileNumber());
+			child.setMobileNumber(user.getMobileNumber());
 			child.setIspasswordChanged(false);
 			child.setChildLiab(0.0);
-			child.setLastName(parent.getLastName());
-			child.setTimeZone(parent.getTimeZone());
-			child.setEmail(parent.getEmail());
+			child.setLastName(user.getLastName());
+			child.setTimeZone(user.getTimeZone());
+			child.setEmail(user.getEmail());
 			child.setExposureLimit(0.0);
 
 			Partnership childPartnership = new Partnership();
@@ -253,16 +310,18 @@ public class EXUserController {
 		return child;
 	}
 
-	public EXUser saveMiniAdmin(EXUser parent) {
+	public EXUser saveMiniAdmin(EXUser user) {
+		
+		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser child = new EXUser();
 		try {
 			// child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
 			// Date()), "GMT", "IST")));
 			// child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
 			// Date()), "GMT", "IST")));
-			child.setUsername(parent.getUsername());
-			child.setUserid(parent.getUserid());
-			child.setPassword(parent.getPassword());
+			child.setUsername(user.getUsername());
+			child.setUserid(user.getUserid());
+			child.setPassword(user.getPassword());
 			child.setUsertype(2);
 			child.setChildLiab(0.0);
 			// child.setAccType(EXConstants.MINI_ADMIN);
@@ -297,14 +356,14 @@ public class EXUserController {
 			child.setMyallPl(0.0);
 			child.setMysportPl(0.0);
 			child.setMycasinoPl(0.0);
-			child.setWebsiteId(parent.getWebsiteId());
-			child.setWebsiteName(parent.getWebsiteName());
+//			child.setWebsiteId(parent.getWebsiteId());
+//			child.setWebsiteName(parent.getWebsiteName());
 			child.setSubChild("0");
-			child.setMobileNumber(parent.getMobileNumber());
+			child.setMobileNumber(user.getMobileNumber());
 			child.setIspasswordChanged(false);
-			child.setLastName(parent.getLastName());
-			child.setTimeZone(parent.getTimeZone());
-			child.setEmail(parent.getEmail());
+			child.setLastName(user.getLastName());
+			child.setTimeZone(user.getTimeZone());
+			child.setEmail(user.getEmail());
 			child.setExposureLimit(0.0);
 
 			Partnership childPartnership = new Partnership();
@@ -325,29 +384,376 @@ public class EXUserController {
 
 		return child;
 	}
+	
+	public EXUser saveSuperSuper(EXUser user){
+		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		EXUser child = new EXUser();
+		try{
+//			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
+//			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
+			child.setUsername(user.getUsername());
+			child.setUserid(user.getUserid());
+			child.setPassword(user.getPassword());
+			child.setUsertype(3);
+			child.setChildLiab(0.0);
+//			child.setAccType(EXConstants.SUPER_SUPER);
+			child.setAccountLock(parent.getAccountLock());
+			child.setBetLock(parent.getBetLock());
+			child.setIsActive(parent.getIsActive());
+			child.setSubadminId(parent.getSubadminId());
+			child.setSubadminName(parent.getSubadminName());
+			child.setSubadminUserId(parent.getSubadminUserId());
+			child.setAdminId(parent.getAdminId());
+			child.setAdminName(parent.getAdminName());
+			child.setAdminUserId(parent.getAdminUserId());
+			child.setMiniadminId(parent.getId());
+			child.setMiniadminName(parent.getUsername());
+			child.setMiniadminUserId(parent.getUserid());
+			child.setSupersuperId("0");
+			child.setSupersuperName("0");
+			child.setSupersuperUserId("0");
+			child.setSupermasterId("0");
+			child.setSupermasterName("0");
+			child.setSupermasterUserId("0");
+			child.setMasterId("0");
+			child.setMasterName("0");
+			child.setMasterUserId("0");
+
+			
+			child.setParentId(parent.getId());
+			child.setParentName(parent.getUsername());
+			child.setParentUserId(parent.getUserid());
+			child.setMyBalance(0.0);
+			child.setFixLimit(0.0);
+			child.setMyallPl(0.0);
+			child.setMysportPl(0.0);
+			child.setMycasinoPl(0.0);
+//			child.setWebsiteId(parent.getWebsiteId());
+//			child.setWebsiteName(parent.getWebsiteName());
+			child.setSubChild("0");
+			child.setMobileNumber(user.getMobileNumber());
+			child.setIspasswordChanged(false);
+			child.setLastName(user.getLastName());
+			child.setTimeZone(user.getTimeZone());
+			child.setEmail(user.getEmail());
+			child.setExposureLimit(0.0);
+			
+			Partnership childPartnership = new Partnership();
+			
+			childPartnership.setAdminSportPart(100.0);
+			childPartnership.setSubadminSportPart(0.0);	
+			childPartnership.setMiniadminSportPart(0.0);
+			childPartnership.setSupermasterSportPart(0.0);
+			childPartnership.setSupermasterSportPart(0.0);
+			childPartnership.setMasterSportPart(0.0);
+			childPartnership.setUserComm(0.0);
+				
+			
+			child.setPartnership(childPartnership);
+			
+		}catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+		
+		return child;
+	}
+	
+	
+	public EXUser saveSuperMaster(EXUser user){
+		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		EXUser child = new EXUser();
+		try{
+//			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
+//			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
+			child.setUsername(user.getUsername());
+			child.setUserid(user.getUserid());
+			child.setPassword(user.getPassword());
+			child.setUsertype(4);
+			child.setChildLiab(0.0);
+//			child.setAccType(EXConstants.SUPER_MASTER);
+			child.setAccountLock(parent.getAccountLock());
+			child.setBetLock(parent.getBetLock());
+			child.setIsActive(parent.getIsActive());
+			child.setSubadminId(parent.getSubadminId());
+			child.setSubadminName(parent.getSubadminName());
+			child.setSubadminUserId(parent.getSubadminUserId());
+			child.setAdminId(parent.getAdminId());
+			child.setAdminName(parent.getAdminName());
+			child.setAdminUserId(parent.getAdminUserId());
+			child.setMiniadminId(parent.getMiniadminId());
+			child.setMiniadminName(parent.getMiniadminName());
+			child.setMiniadminUserId(parent.getMiniadminUserId());
+			child.setSupersuperId(parent.getId());
+			child.setSupersuperName(parent.getUsername());
+			child.setSupersuperUserId(parent.getUserid());
+			child.setSupermasterId("0");
+			child.setSupermasterName("0");
+			child.setSupermasterUserId("0");
+			child.setMasterId("0");
+			child.setMasterName("0");
+			child.setMasterUserId("0");
+
+			child.setParentId(parent.getId());
+			child.setParentName(parent.getUsername());
+			child.setParentUserId(parent.getUserid());
+			
+			
+			child.setMyBalance(0.0);
+			child.setFixLimit(0.0);
+			child.setMyallPl(0.0);
+			child.setMysportPl(0.0);
+			child.setMycasinoPl(0.0);
+//			child.setWebsiteId(parent.getWebsiteId());
+//			child.setWebsiteName(parent.getWebsiteName());
+			child.setSubChild("0");
+			child.setMobileNumber(user.getMobileNumber());
+			child.setIspasswordChanged(false);
+			child.setLastName(user.getLastName());
+			child.setTimeZone(user.getTimeZone());
+			child.setEmail(user.getEmail());
+			child.setExposureLimit(0.0);
+			
+			Partnership childPartnership = new Partnership();
+			
+			childPartnership.setAdminSportPart(100.0);
+			childPartnership.setSubadminSportPart(0.0);	
+			childPartnership.setMiniadminSportPart(0.0);
+			childPartnership.setSupermasterSportPart(0.0);
+			childPartnership.setSupermasterSportPart(0.0);
+			childPartnership.setMasterSportPart(0.0);
+			childPartnership.setUserComm(0.0);
+			
+			child.setPartnership(childPartnership);
+			
+			
+		}catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+		
+		return child;
+	}
+	
+	
+	public EXUser saveMaster(EXUser user){
+		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		EXUser child = new EXUser();
+		try{
+//			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
+//			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
+			child.setUsername(user.getUsername());
+			child.setUserid(user.getUserid());
+			child.setPassword(user.getPassword());
+			child.setUsertype(5);
+			child.setChildLiab(0.0);
+//			child.setAccType(EXConstants.MASTER);
+			child.setAccountLock(parent.getAccountLock());
+			child.setBetLock(parent.getBetLock());
+			child.setIsActive(parent.getIsActive());
+			child.setSubadminId(parent.getSubadminId());
+			child.setSubadminName(parent.getSubadminName());
+			child.setSubadminUserId(parent.getSubadminUserId());
+			child.setAdminId(parent.getAdminId());
+			child.setAdminName(parent.getAdminName());
+			child.setAdminUserId(parent.getAdminUserId());
+			child.setMiniadminId(parent.getMiniadminId());
+			child.setMiniadminName(parent.getMiniadminName());
+			child.setMiniadminUserId(parent.getMiniadminUserId());
+			child.setSupersuperId(parent.getSupersuperId());
+			child.setSupersuperName(parent.getSupersuperName());
+			child.setSupersuperUserId(parent.getSupersuperUserId());
+			child.setSupermasterId(parent.getId());
+			child.setSupermasterName(parent.getUsername());
+			child.setSupermasterUserId(parent.getUserid());
+			child.setMasterId("0");
+			child.setMasterName("0");
+			child.setMasterUserId("0");
+			
+			child.setParentId(parent.getId());
+			child.setParentName(parent.getUsername());
+			child.setParentUserId(parent.getUserid());
+			
+			
+			child.setMyBalance(0.0);
+			child.setFixLimit(0.0);
+			child.setMyallPl(0.0);
+			child.setMysportPl(0.0);
+			child.setMycasinoPl(0.0);
+//			child.setWebsiteId(parent.getWebsiteId());
+//			child.setWebsiteName(parent.getWebsiteName());
+			child.setSubChild("0");
+			child.setMobileNumber(user.getMobileNumber());
+			child.setIspasswordChanged(false);
+			child.setLastName(user.getLastName());
+			child.setTimeZone(user.getTimeZone());
+			child.setEmail(user.getEmail());
+			child.setExposureLimit(0.0);
+			
+			Partnership childPartnership = new Partnership();
+			
+			childPartnership.setAdminSportPart(100.0);
+			childPartnership.setSubadminSportPart(0.0);	
+			childPartnership.setMiniadminSportPart(0.0);
+			childPartnership.setSupermasterSportPart(0.0);
+			childPartnership.setSupermasterSportPart(0.0);
+			childPartnership.setMasterSportPart(0.0);
+			childPartnership.setUserComm(0.0);
+			
+			child.setPartnership(childPartnership);
+			
+		}catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+		
+		return child;
+	}
+	
+	
+	public EXUser saveUser(EXUser user){
+		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		EXUser child = new EXUser();
+		try{
+//			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
+//			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
+			child.setUsername(user.getUsername());
+			child.setUserid(user.getUserid());
+			child.setPassword(user.getPassword());
+			child.setUsertype(6);
+			child.setChildLiab(0.0);
+//			child.setAccType(EXConstants.USER);
+			child.setAccountLock(parent.getAccountLock());
+			child.setBetLock(parent.getBetLock());
+			child.setIsActive(parent.getIsActive());
+			child.setSubadminId(parent.getSubadminId());
+			child.setSubadminName(parent.getSubadminName());
+			child.setSubadminUserId(parent.getSubadminUserId());
+			child.setAdminId(parent.getAdminId());
+			child.setAdminName(parent.getAdminName());
+			child.setAdminUserId(parent.getAdminUserId());
+			child.setMiniadminId(parent.getMiniadminId());
+			child.setMiniadminName(parent.getMiniadminName());
+			child.setMiniadminUserId(parent.getMiniadminUserId());
+			child.setSupersuperId(parent.getSupersuperId());
+			child.setSupersuperName(parent.getSupersuperName());
+			child.setSupersuperUserId(parent.getSupersuperUserId());
+			child.setSupermasterId(parent.getSupermasterId());
+			child.setSupermasterName(parent.getSupermasterName());
+			child.setSupermasterUserId(parent.getSupermasterUserId());
+			child.setMasterId(parent.getId());
+			child.setMasterName(parent.getUsername());
+			child.setMasterUserId(parent.getUserid());
+			
+			child.setParentId(parent.getId());
+			child.setParentName(parent.getUsername());
+			child.setParentUserId(parent.getUserid());
+			
+			
+			child.setMyBalance(0.0);
+			child.setFixLimit(0.0);
+			child.setMyallPl(0.0);
+			child.setMysportPl(0.0);
+			child.setMycasinoPl(0.0);
+//			child.setWebsiteId(parent.getWebsiteId());
+//			child.setWebsiteName(parent.getWebsiteName());
+			child.setSubChild("0");
+			child.setMobileNumber(user.getMobileNumber());
+			child.setIspasswordChanged(false);
+			child.setLastName(user.getLastName());
+			child.setTimeZone(user.getTimeZone());
+			child.setEmail(user.getEmail());
+//			child.setExposureLimit(parent.getExposureLimit());
+		
+			UserStake stake = new UserStake();
+			stake.setStake1(1000);
+			stake.setStakename1("1000");
+			stake.setStake2(5000);
+			stake.setStakename2("5000");
+			stake.setStake3(10000);
+			stake.setStakename3("10000");
+			stake.setStake4(25000);
+			stake.setStakename4("25000");
+			stake.setStake5(50000);
+			stake.setStakename5("50000");
+			stake.setStake6(100000);
+			stake.setStakename6("100000");
+			stake.setStake7(200000);
+			stake.setStakename7("200000");
+			stake.setStake8(500000);
+			stake.setStakename8("500000");
+			ArrayList<Integer> selectedStake = new ArrayList<>();
+			for(int i =1;i<=6;i++){
+				selectedStake.add(i);
+			}
+			stake.setSelectedStakes(selectedStake);
+			
+			Partnership childPartnership = new Partnership();
+			
+			childPartnership.setAdminSportPart(100.0);
+			childPartnership.setSubadminSportPart(0.0);	
+			childPartnership.setMiniadminSportPart(0.0);
+			childPartnership.setSupermasterSportPart(0.0);
+			childPartnership.setSupermasterSportPart(0.0);
+			childPartnership.setMasterSportPart(0.0);
+//			if(userData.getDouble("userComm")>2.0){
+//				childPartnership.setUserComm(2.0);
+//			}else{
+//				childPartnership.setUserComm(userData.getDouble("userComm"));
+//			}			
+			
+			child.setPartnership(childPartnership);
+			child.setStake(stake);
+			child.setRateDifference(3);
+			child.setIsOneClickBet(false);
+			child.setDefaultStake(0.0);
+			child.setHighlightOdds(true);
+			child.setAcceptAnyFancyOdds(false);
+			child.setAcceptAnySportsBookOdds(false);
+			child.setAcceptAnyBinaryOdds(false);
+		}catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+		
+		return child;
+	}
+
 
 	
 	
 	
 	@PostMapping("/managementHome")
-	public ResponseEntity<ResponseBean1> managementHome(@RequestBody LoginRequest login) {
+	public ResponseEntity<ResponseBean1> managementHome(@RequestBody EXUser login) {
 		
-    LoginRequest usersse = authenticaterepo.findByUserid(login.getUserid());
+
+		
+		
+		EXUser users = authenticaterepo.findByUserid(login.getUserid());
+		
 		//user name null or wrong
-		if(usersse==null) {
-			ResponseBean1 reponsebean=ResponseBean1.builder().title(null).type("give correct name").message(null).build();
+		if(users==null) {
+			ResponseBean1 reponsebean=ResponseBean1.builder().title("ManagementHome").type("Error").message("Wrong UserId!!!").build();
 		return new ResponseEntity<ResponseBean1>(reponsebean, HttpStatus.UNAUTHORIZED);
 		}
 		
 		//user password null or wrong
-		if(!usersse.getPassword().equals(login.getPassword())) {
-			ResponseBean1 reponsebean=ResponseBean1.builder().title(null).type("give correct password").message("fghjk").build();
+		if(!users.getPassword().equals(login.getPassword())) {
+			ResponseBean1 reponsebean=ResponseBean1.builder().title("ManagementHome").type("Error").message("Wrong password!!!").build();
 		return new ResponseEntity<ResponseBean1>(reponsebean, HttpStatus.UNAUTHORIZED);
 		}
 		
+		//success case
+		//httpSession.setAttribute("EXUser", new EXUser());
+		//httpSession.setAttribute("userid", login.getUserid());
+		//httpSession.setAttribute("password", login.getPassword());
+		httpSession.setAttribute("EXUser", users);
 		
-		//sucess case
-		ResponseBean1 reponsebean=ResponseBean1.builder().title(null).type("sucess").message("dfghj").build();
+		ResponseBean1 reponsebean=ResponseBean1.builder().title("ManagementHome").type("success").message("User LoggedIn Successfully!!").build();
 		return new ResponseEntity<ResponseBean1>(reponsebean, HttpStatus.OK);
 	}
 	
@@ -545,19 +951,30 @@ public class EXUserController {
 		return findAll;
 	}
 	
-	@PostMapping("/login")
-	public ResponseEntity<ResponseBean> login(@RequestBody LoginRequest request) {
-
-		if (request.getUserid() == null || request.getPassword() == null) {
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ResponseBean("error","UserId and password required","Management login"));
-		}
-
-		EXUser exUser = userRepo.findById(request.getUserid()).get();
-		if (exUser != null && exUser.getPassword().equals(request.getPassword())) {
-			return ResponseEntity.ok(new ResponseBean("Success","Login successful!","Management login"));
-		} else {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ResponseBean("error","Invalid userid or password.","Management login"));
+	@GetMapping("/allchild")
+	public List<EXUser> listUserType( ){
+		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		Integer usertype = parent.getUsertype()+1;
+		List<EXUser> findByUsertype = userRepo.findByUsertype(usertype);
+		return findByUsertype;
+	}
+	
+	@PostMapping("/{parentId}/{usertype}")
+	public ResponseEntity<List<EXUser>> listOnHierarchy(@PathVariable String parentId, @PathVariable Integer usertype){
+		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		if(parent.getUsertype()<usertype) {
+		List<EXUser> findByUsertype = userRepo.findByParentIdAndUsertype(parentId, usertype);
+		return ResponseEntity.ok(findByUsertype);
+		}else {
+			return null ;
 		}
 	}
+	
+//	public List<EXUser> listOnHierarchy(@PathVariable String parentId){
+//		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+//		Integer usertype = parent.getUsertype()+1;
+//		List<EXUser> findByUsertype = userRepo.findByUsertype(usertype);
+//		
+//	}
 
 }

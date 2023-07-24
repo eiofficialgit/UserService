@@ -8,7 +8,7 @@ import com.example.entity.LoginRequest;
 @Repository
 public interface Authenticaterepo extends MongoRepository<EXUser, String>{
 
-	LoginRequest findByUserid(String userid);
+	EXUser findByUserid(String userid);
 	
 
 }
