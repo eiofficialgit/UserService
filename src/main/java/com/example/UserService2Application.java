@@ -10,4 +10,9 @@ public class UserService2Application {
 		SpringApplication.run(UserService2Application.class, args);
 	}
 
+	@Bean
+	public RestTemplate getRestTemplate() {
+		return new RestTemplate();
+	}
+
 }
