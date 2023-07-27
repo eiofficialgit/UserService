@@ -48,6 +48,9 @@ public class EXUserController {
 	@Autowired
 	private HttpSession httpSession;
 
+	@Autowired
+	private RestTemplate restTemplate;
+
 	String regex = "^(?=.*[0-9])" + "(?=.*[a-z])(?=.*[A-Z])" + "(?=\\S+$).{8,15}$";
 
 	Pattern p = Pattern.compile(regex);
