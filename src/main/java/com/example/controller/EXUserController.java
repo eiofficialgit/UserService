@@ -113,7 +113,7 @@ public class EXUserController {
 			// TODO: handle exception
 			e.printStackTrace();
 			response.put("type", "error");
-			response.put("message", "Something Went Wrong");
+			response.put("message", "Password Must contains 1 Upper Case, 1 Lowe Case & 1 Numeric Value & in Between 8-15 Charachter");
 			return CompletableFuture.completedFuture(response);
 		}
 
@@ -260,7 +260,7 @@ public class EXUserController {
 			// Date()), "GMT", "IST")));
 			child.setUsername(user.getUsername());
 			child.setUserid(user.getUserid());
-//			String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
+			
 			child.setUsertype(1);
 			// child.setAccType(EXConstants.SUB_ADMIN);
 			child.setAccountLock(false);
@@ -775,10 +775,6 @@ public class EXUserController {
 		return new ResponseEntity<ResponseBean1>(reponsebean, HttpStatus.UNAUTHORIZED);
 		}
 		
-		//success case
-		//httpSession.setAttribute("EXUser", new EXUser());
-		//httpSession.setAttribute("userid", login.getUserid());
-		//httpSession.setAttribute("password", login.getPassword());
 		httpSession.setAttribute("EXUser", users);
 		
 		ResponseBean1 reponsebean=ResponseBean1.builder().title("ManagementHome").type("success").message("User LoggedIn Successfully!!").build();
