@@ -249,7 +249,7 @@ public class EXUserController {
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		
 		EXUser child = new EXUser();
-		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+parent.getPassword(),String.class);
+		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+user.getPassword(),String.class);
 		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptPassword,String.class);
 		child.setPassword(encryptPassword);
 		try {
@@ -327,7 +327,7 @@ public class EXUserController {
 		
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser child = new EXUser();
-		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+parent.getPassword(),String.class);
+		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+user.getPassword(),String.class);
 		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptPassword,String.class);
 		child.setPassword(encryptPassword);
 		try {
@@ -404,7 +404,7 @@ public class EXUserController {
 	public EXUser saveSuperSuper(EXUser user){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser child = new EXUser();
-		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+parent.getPassword(),String.class);
+		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+user.getPassword(),String.class);
 		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptPassword,String.class);
 		child.setPassword(encryptPassword);
 		try{
@@ -483,7 +483,7 @@ public class EXUserController {
 	public EXUser saveSuperMaster(EXUser user){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser child = new EXUser();
-		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+parent.getPassword(),String.class);
+		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+user.getPassword(),String.class);
 		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptPassword,String.class);
 		child.setPassword(encryptPassword);
 		try{
@@ -563,7 +563,7 @@ public class EXUserController {
 	public EXUser saveMaster(EXUser user){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser child = new EXUser();
-		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+parent.getPassword(),String.class);
+		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+user.getPassword(),String.class);
 		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptPassword,String.class);
 		child.setPassword(encryptPassword);
 		try{
@@ -642,7 +642,7 @@ public class EXUserController {
 	public EXUser saveUser(EXUser user){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser child = new EXUser();
-		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+parent.getPassword(),String.class);
+		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+user.getPassword(),String.class);
 		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptPassword,String.class);
 		child.setPassword(encryptPassword);
 		try{
