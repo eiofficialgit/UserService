@@ -15,7 +15,7 @@ public class EXUser {
 	@Id
 	private String id;
 	
-	private String username;
+	private String websitename;
 	 
 	private String email;
 	 

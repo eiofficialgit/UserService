@@ -6,8 +6,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
@@ -24,7 +25,6 @@ import org.springframework.web.client.RestTemplate;
 import com.example.entity.EXUser;
 import com.example.entity.Partnership;
 import com.example.entity.ResponseBean;
-import com.example.entity.ResponseBean1;
 import com.example.entity.UserStake;
 import com.example.entity.WebsiteBean;
 import com.example.repository.Authenticaterepo;
@@ -77,14 +77,14 @@ public class EXUserController {
 				response.put("type", "error");
 				response.put("message", "User Id Required");
 				return CompletableFuture.completedFuture(response);
-			} else if (parent.getUsername().equalsIgnoreCase("") || parent.getUsername().length() < 1) {
+			} else if (parent.getWebsitename().equalsIgnoreCase("") || parent.getWebsitename().length() < 1) {
 				response.put("type", "error");
 				response.put("message", "UserName Must be grater than 1 Characters");
 				return CompletableFuture.completedFuture(response);
 			} else if (p.matcher(decryptPassword).matches() == false) {
 				response.put("type", "error");
 				response.put("message",
-						"Password Must contains 1 Upper Case, 1 Lowe Case & 1 Numeric Value & in Between 8-15 Charachter");
+						"Password Must contains 1 Upper Case, 1 Lowe Case & 1 Numeric Value & in Between 10-15 Charachter");
 				return CompletableFuture.completedFuture(response);
 			} else if (parent.getMobileNumber() == null || parent.getMobileNumber().length() > 10) {
 				response.put("type", "error");
@@ -110,10 +110,9 @@ public class EXUserController {
 				return CompletableFuture.completedFuture(response);
 			}
 		} catch (Exception e) {
-			// TODO: handle exception
 			e.printStackTrace();
 			response.put("type", "error");
-			response.put("message", "Password Must contains 1 Upper Case, 1 Lowe Case & 1 Numeric Value & in Between 8-15 Charachter");
+			response.put("message", "Something Went Wrong !");
 			return CompletableFuture.completedFuture(response);
 		}
 
@@ -258,7 +257,7 @@ public class EXUserController {
 			// Date()), "GMT", "IST")));
 			// child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
 			// Date()), "GMT", "IST")));
-			child.setUsername(user.getUsername());
+			child.setWebsitename(user.getWebsitename());
 			child.setUserid(user.getUserid());
 			
 			child.setUsertype(1);
@@ -267,10 +266,10 @@ public class EXUserController {
 			child.setBetLock(false);
 			child.setIsActive(true);
 			child.setParentId(parent.getId());
-			child.setParentName(parent.getUsername());
+			child.setParentName(parent.getWebsitename());
 			child.setParentUserId(parent.getUserid());
 			child.setAdminId(parent.getId());
-			child.setAdminName(parent.getUsername());
+			child.setAdminName(parent.getWebsitename());
 			child.setAdminUserId(parent.getUserid());
 			child.setSubadminId("0");
 			child.setSubadminName("0");
@@ -335,7 +334,7 @@ public class EXUserController {
 			// Date()), "GMT", "IST")));
 			// child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
 			// Date()), "GMT", "IST")));
-			child.setUsername(user.getUsername());
+			child.setWebsitename(user.getWebsitename());
 			child.setUserid(user.getUserid());
 			
 			child.setUsertype(2);
@@ -348,11 +347,11 @@ public class EXUserController {
 			child.setAdminName(parent.getAdminName());
 			child.setAdminUserId(parent.getAdminUserId());
 			child.setSubadminId(parent.getId());
-			child.setSubadminName(parent.getUsername());
+			child.setSubadminName(parent.getWebsitename());
 			child.setSubadminUserId(parent.getUserid());
 
 			child.setParentId(parent.getId());
-			child.setParentName(parent.getUsername());
+			child.setParentName(parent.getWebsitename());
 			child.setParentUserId(parent.getUserid());
 
 			child.setMiniadminId("0");
@@ -410,7 +409,7 @@ public class EXUserController {
 		try{
 //			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 //			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
-			child.setUsername(user.getUsername());
+			child.setWebsitename(user.getWebsitename());
 			child.setUserid(user.getUserid());
 			
 			child.setUsertype(3);
@@ -426,7 +425,7 @@ public class EXUserController {
 			child.setAdminName(parent.getAdminName());
 			child.setAdminUserId(parent.getAdminUserId());
 			child.setMiniadminId(parent.getId());
-			child.setMiniadminName(parent.getUsername());
+			child.setMiniadminName(parent.getWebsitename());
 			child.setMiniadminUserId(parent.getUserid());
 			child.setSupersuperId("0");
 			child.setSupersuperName("0");
@@ -440,7 +439,7 @@ public class EXUserController {
 
 			
 			child.setParentId(parent.getId());
-			child.setParentName(parent.getUsername());
+			child.setParentName(parent.getWebsitename());
 			child.setParentUserId(parent.getUserid());
 			child.setMyBalance(0.0);
 			child.setFixLimit(0.0);
@@ -489,7 +488,7 @@ public class EXUserController {
 		try{
 //			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 //			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
-			child.setUsername(user.getUsername());
+			child.setWebsitename(user.getWebsitename());
 			child.setUserid(user.getUserid());
 			
 			child.setUsertype(4);
@@ -508,7 +507,7 @@ public class EXUserController {
 			child.setMiniadminName(parent.getMiniadminName());
 			child.setMiniadminUserId(parent.getMiniadminUserId());
 			child.setSupersuperId(parent.getId());
-			child.setSupersuperName(parent.getUsername());
+			child.setSupersuperName(parent.getWebsitename());
 			child.setSupersuperUserId(parent.getUserid());
 			child.setSupermasterId("0");
 			child.setSupermasterName("0");
@@ -518,7 +517,7 @@ public class EXUserController {
 			child.setMasterUserId("0");
 
 			child.setParentId(parent.getId());
-			child.setParentName(parent.getUsername());
+			child.setParentName(parent.getWebsitename());
 			child.setParentUserId(parent.getUserid());
 			
 			
@@ -569,7 +568,7 @@ public class EXUserController {
 		try{
 //			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 //			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
-			child.setUsername(user.getUsername());
+			child.setWebsitename(user.getWebsitename());
 			child.setUserid(user.getUserid());
 			
 			child.setUsertype(5);
@@ -591,14 +590,14 @@ public class EXUserController {
 			child.setSupersuperName(parent.getSupersuperName());
 			child.setSupersuperUserId(parent.getSupersuperUserId());
 			child.setSupermasterId(parent.getId());
-			child.setSupermasterName(parent.getUsername());
+			child.setSupermasterName(parent.getWebsitename());
 			child.setSupermasterUserId(parent.getUserid());
 			child.setMasterId("0");
 			child.setMasterName("0");
 			child.setMasterUserId("0");
 			
 			child.setParentId(parent.getId());
-			child.setParentName(parent.getUsername());
+			child.setParentName(parent.getWebsitename());
 			child.setParentUserId(parent.getUserid());
 			
 			
@@ -648,7 +647,7 @@ public class EXUserController {
 		try{
 //			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 //			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
-			child.setUsername(user.getUsername());
+			child.setWebsitename(user.getWebsitename());
 			child.setUserid(user.getUserid());
 			
 			child.setUsertype(6);
@@ -673,11 +672,11 @@ public class EXUserController {
 			child.setSupermasterName(parent.getSupermasterName());
 			child.setSupermasterUserId(parent.getSupermasterUserId());
 			child.setMasterId(parent.getId());
-			child.setMasterName(parent.getUsername());
+			child.setMasterName(parent.getWebsitename());
 			child.setMasterUserId(parent.getUserid());
 			
 			child.setParentId(parent.getId());
-			child.setParentName(parent.getUsername());
+			child.setParentName(parent.getWebsitename());
 			child.setParentUserId(parent.getUserid());
 			
 			
@@ -756,7 +755,7 @@ public class EXUserController {
 	
 	
 	@PostMapping("/managementHome")
-	public ResponseEntity<ResponseBean1> managementHome(@RequestBody EXUser login) {
+	public ResponseEntity<ResponseBean> managementHome(@RequestBody EXUser login) {
 		
 
 		
@@ -765,20 +764,20 @@ public class EXUserController {
 		
 		//user name null or wrong
 		if(users==null) {
-			ResponseBean1 reponsebean=ResponseBean1.builder().title("ManagementHome").type("Error").message("Wrong UserId!!!").build();
-		return new ResponseEntity<ResponseBean1>(reponsebean, HttpStatus.UNAUTHORIZED);
+			ResponseBean reponsebean=ResponseBean.builder().title("ManagementHome").type("Error").message("Wrong UserId!!!").build();
+		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.UNAUTHORIZED);
 		}
 		
 		//user password null or wrong
 		if(!users.getPassword().equals(login.getPassword())) {
-			ResponseBean1 reponsebean=ResponseBean1.builder().title("ManagementHome").type("Error").message("Wrong password!!!").build();
-		return new ResponseEntity<ResponseBean1>(reponsebean, HttpStatus.UNAUTHORIZED);
+			ResponseBean reponsebean=ResponseBean.builder().title("ManagementHome").type("Error").message("Wrong password!!!").build();
+		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.UNAUTHORIZED);
 		}
 		
 		httpSession.setAttribute("EXUser", users);
-		
-		ResponseBean1 reponsebean=ResponseBean1.builder().title("ManagementHome").type("success").message("User LoggedIn Successfully!!").build();
-		return new ResponseEntity<ResponseBean1>(reponsebean, HttpStatus.OK);
+
+		ResponseBean reponsebean=ResponseBean.builder().title("ManagementHome").type("success").message(httpSession.getAttribute("EXUser")).build();
+		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	}
 	
 
@@ -982,6 +981,16 @@ public class EXUserController {
 		List<EXUser> findByUsertype = userRepo.findByUsertype(usertype);
 		return findByUsertype;
 	}
+
+	@GetMapping("/allchildwithpagination")
+	public List<EXUser> listUserTypeWithPagination( @RequestParam("page") int page, @RequestParam("size") int size) {
+	    EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+	    Integer usertype = parent.getUsertype() + 1;
+	    PageRequest pageable = PageRequest.of(page, size);
+	    Page<EXUser> findByUsertype = userRepo.findByUsertype(usertype, pageable);
+	    List<EXUser> users = findByUsertype.getContent();
+	    return users;
+	}
 	
 	@PostMapping("/{parentId}/{usertype}")
 	public ResponseEntity<List<EXUser>> listOnHierarchy(@PathVariable String parentId, @PathVariable Integer usertype){
@@ -994,7 +1003,4 @@ public class EXUserController {
 		}
 	}
 	
-	
-
-
 }
