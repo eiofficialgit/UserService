@@ -31,6 +31,7 @@ import com.example.repository.Authenticaterepo;
 import com.example.repository.EXUserRepository;
 import com.example.repository.WebsiteBeanRepository;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
 @RestController
@@ -953,9 +954,16 @@ public class EXUserController {
 		// }
 		// }
 	
-		
+	@PostMapping("/checkuser")
+	public ResponseEntity<ResponseBean> checkuser(@RequestBody EXUser login) {
+		EXUser users = userRepo.findByUserid(login.getUserid());
+		if (users != null && users.getUserid().equals(login.getUserid())) {
+			return ResponseEntity.ok(new ResponseBean("Error", "User already exist!!", "CheckUser"));
+		} else {
+			return ResponseEntity.ok(new ResponseBean("Success", "Valid User", "CheckUser"));
+		}
+	}	
 	
-
 	@PostMapping("/website")
 	public ResponseEntity<ResponseBean> saveWebsite(@RequestBody WebsiteBean website) {
 		String name = website.getName();
@@ -992,7 +1000,7 @@ public class EXUserController {
 	    return users;
 	}
 	
-	@PostMapping("/{parentId}/{usertype}")
+	@GetMapping("/{parentId}/{usertype}")
 	public ResponseEntity<List<EXUser>> listOnHierarchy(@PathVariable String parentId, @PathVariable Integer usertype){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		if(parent.getUsertype()<usertype) {
@@ -1001,6 +1009,15 @@ public class EXUserController {
 		}else {
 			return null ;
 		}
+	}
+	
+	@GetMapping("/logout")
+	public ResponseEntity<ResponseBean> logout(HttpServletRequest request){
+		HttpSession session = request.getSession(false);
+		 if (session != null) {
+	            session.invalidate();
+	     }
+		 return ResponseEntity.ok(new ResponseBean("success", "Logout Successfully!!", "ManagementHome"));
 	}
 	
 }
