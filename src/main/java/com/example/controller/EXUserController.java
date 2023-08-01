@@ -59,6 +59,10 @@ public class EXUserController {
 	String regex = "^(?=.*[0-9])" + "(?=.*[a-z])(?=.*[A-Z])" + "(?=\\S+$).{8,15}$";
 
 	Pattern p = Pattern.compile(regex);
+	
+	String regex1="^[1-9][0-9]{9}$";
+	
+	Pattern p1= Pattern.compile(regex1);
 
 	@Async("asyncExecutor")
 	public CompletableFuture<HashMap<String, String>> validateUserConditions(EXUser parent) {
@@ -82,15 +86,10 @@ public class EXUserController {
 				response.put("type", "error");
 				response.put("message", "UserName Must be grater than 1 Characters");
 				return CompletableFuture.completedFuture(response);
-			} else if (p.matcher(decryptPassword).matches() == false) {
-				response.put("type", "error");
-				response.put("message",
-						"Password Must contains 1 Upper Case, 1 Lowe Case & 1 Numeric Value & in Between 10-15 Charachter");
-				return CompletableFuture.completedFuture(response);
-			} else if (parent.getMobileNumber() == null || parent.getMobileNumber().length() > 10) {
-				response.put("type", "error");
-				response.put("message", "Mobile Number Must Be Of 10 Digit or Balnk");
-				return CompletableFuture.completedFuture(response);
+			}	else if (parent.getMobileNumber() == null || parent.getMobileNumber().length()>10 || parent.getMobileNumber().length()<10 || !isValidMobileNumber(parent.getMobileNumber())) {
+					response.put("type", "error");
+					response.put("message", "Mobile Number Must Be Of 10 Digit or Blank");
+					return CompletableFuture.completedFuture(response);
 			} else if (parent.getExposureLimit() == null) {
 				response.put("type", "error");
 				response.put("message", "Invalid Exposure Limit");
@@ -102,18 +101,25 @@ public class EXUserController {
 			}else if (parent.getFirstName() == null || parent.getFirstName().isEmpty()) {
 					response.put("type", "error");
 					response.put("message", "Enter FirstName");
+					return CompletableFuture.completedFuture(response);
 				} else if (parent.getLastName() == null || parent.getLastName().isEmpty()) {
 					response.put("type", "error");
 					response.put("message", "Enter LastName");
+					return CompletableFuture.completedFuture(response);
 			} else if (parent.getTimeZone().equalsIgnoreCase(null) || parent.getTimeZone().equalsIgnoreCase("")) {
 				response.put("type", "error");
 				response.put("message", "Invalid TimeZone");
+				return CompletableFuture.completedFuture(response);
+			} else if (p.matcher(decryptPassword).matches() == false) {
+				response.put("type", "error");
+				response.put("message",
+						"Password Must contains 1 Upper Case, 1 Lowe Case & 1 Numeric Value & in Between 8-15 Charachter");
 				return CompletableFuture.completedFuture(response);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			response.put("type", "error");
-			response.put("message", "Something Went Wrong !");
+			response.put("message", "Password Must contains 1 Upper Case, 1 Lowe Case & 1 Numeric Value & in Between 8-15 Charachter");
 			return CompletableFuture.completedFuture(response);
 		}
 
@@ -128,6 +134,14 @@ public class EXUserController {
 		java.util.regex.Matcher m = p.matcher(email);
 		return m.matches();
 	}
+	
+	public boolean isValidMobileNumber(String mobileNumber) {
+		String ePattern  = "^[1-9][0-9]{9}$";
+		java.util.regex.Pattern p1 = java.util.regex.Pattern.compile(ePattern);
+		java.util.regex.Matcher m1 = p1.matcher(mobileNumber);
+		return m1.matches();
+	}
+	
 
 //		 @ResponseBody
 //		 @RequestMapping(value = "/validateUserCreation",method = RequestMethod.POST)
