@@ -110,7 +110,7 @@ public class EXUserController {
 				response.put("type", "error");
 				response.put("message", "Invalid TimeZone");
 				return CompletableFuture.completedFuture(response);
-			} else if (p.matcher(decryptPassword).matches() == false) {
+			} else if (!p.matcher(decryptPassword).matches()) {
 				response.put("type", "error");
 				response.put("message",
 						"Password Must contains 1 Upper Case, 1 Lowe Case & 1 Numeric Value & in Between 8-15 Charachter");
@@ -119,7 +119,7 @@ public class EXUserController {
 		} catch (Exception e) {
 			e.printStackTrace();
 			response.put("type", "error");
-			response.put("message", "Password Must contains 1 Upper Case, 1 Lowe Case & 1 Numeric Value & in Between 8-15 Charachter");
+			response.put("message", "Something went wrong !");
 			return CompletableFuture.completedFuture(response);
 		}
 
