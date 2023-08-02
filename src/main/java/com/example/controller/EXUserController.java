@@ -35,8 +35,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
 @RestController
-@RequestMapping("/exuser")
 @CrossOrigin("*")
+@RequestMapping("/exuser")
 public class EXUserController {
 
 	@Autowired
