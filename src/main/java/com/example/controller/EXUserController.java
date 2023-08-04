@@ -771,11 +771,8 @@ public class EXUserController {
 	
 	@PostMapping("/managementHome")
 	public ResponseEntity<ResponseBean> managementHome(@RequestBody EXUser login) {
-		
-
-		
-		
-		EXUser users = authenticaterepo.findByUserid(login.getUserid());
+		String decryptUserId = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+login.getUserid(),String.class);
+		EXUser users = authenticaterepo.findByUserid(decryptUserId);
 		
 		//user name null or wrong
 		if(users==null) {
