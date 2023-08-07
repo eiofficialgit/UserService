@@ -74,21 +74,34 @@ public class EXUserController {
 				response.put("message", "Invalid User Data");
 				return CompletableFuture.completedFuture(response);
 			}
-			if (parent.getEmail() == null || !isValidEmailAddress(parent.getEmail())) {
+			if (parent.getWebsitename().equalsIgnoreCase("") || parent.getWebsitename().length() < 1) {
+				response.put("type", "error");
+				response.put("message", "WebsiteName Must be Required");
+				return CompletableFuture.completedFuture(response);
+			} else if (parent.getEmail() == null || !isValidEmailAddress(parent.getEmail())) {
 				response.put("type", "error");
 				response.put("message", "Invalid Email Address");
 				return CompletableFuture.completedFuture(response);
 			} else if (parent.getUserid().equalsIgnoreCase(null) || parent.getUserid().equalsIgnoreCase("")) {
 				response.put("type", "error");
-				response.put("message", "User Id Required");
+				response.put("message", "User Id Must be Required");
 				return CompletableFuture.completedFuture(response);
-			} else if (parent.getWebsitename().equalsIgnoreCase("") || parent.getWebsitename().length() < 1) {
+			} else if (!p.matcher(decryptPassword).matches()) {
 				response.put("type", "error");
-				response.put("message", "UserName Must be grater than 1 Characters");
+				response.put("message",
+						"Password Must contains 1 Upper Case, 1 Lowe Case & 1 Numeric Value & in Between 8-15 Charachter");
 				return CompletableFuture.completedFuture(response);
-			}	else if (parent.getMobileNumber() == null || parent.getMobileNumber().length()>10 || parent.getMobileNumber().length()<10 || !isValidMobileNumber(parent.getMobileNumber())) {
+			} else if (parent.getFirstName() == null || parent.getFirstName().isEmpty()) {
+				response.put("type", "error");
+				response.put("message", "Enter FirstName");
+				return CompletableFuture.completedFuture(response);
+			} else if (parent.getLastName() == null || parent.getLastName().isEmpty()) {
+				response.put("type", "error");
+				response.put("message", "Enter LastName");
+				return CompletableFuture.completedFuture(response);
+			} else if (parent.getMobileNumber() == null || parent.getMobileNumber().length()>10 || parent.getMobileNumber().length()<10 || !isValidMobileNumber(parent.getMobileNumber())) {
 					response.put("type", "error");
-					response.put("message", "Mobile Number Must Be Of 10 Digit or Blank");
+					response.put("message", "Mobile Number Must Be Of 10 Digit");
 					return CompletableFuture.completedFuture(response);
 			} else if (parent.getExposureLimit() == null) {
 				response.put("type", "error");
@@ -98,22 +111,9 @@ public class EXUserController {
 //					response.put("type","error");
 //					response.put("message","Invalid Commission");
 //					return CompletableFuture.completedFuture(response);
-			}else if (parent.getFirstName() == null || parent.getFirstName().isEmpty()) {
-					response.put("type", "error");
-					response.put("message", "Enter FirstName");
-					return CompletableFuture.completedFuture(response);
-				} else if (parent.getLastName() == null || parent.getLastName().isEmpty()) {
-					response.put("type", "error");
-					response.put("message", "Enter LastName");
-					return CompletableFuture.completedFuture(response);
 			} else if (parent.getTimeZone().equalsIgnoreCase(null) || parent.getTimeZone().equalsIgnoreCase("")) {
 				response.put("type", "error");
 				response.put("message", "Invalid TimeZone");
-				return CompletableFuture.completedFuture(response);
-			} else if (!p.matcher(decryptPassword).matches()) {
-				response.put("type", "error");
-				response.put("message",
-						"Password Must contains 1 Upper Case, 1 Lowe Case & 1 Numeric Value & in Between 8-15 Charachter");
 				return CompletableFuture.completedFuture(response);
 			}
 		} catch (Exception e) {
