@@ -119,7 +119,7 @@ public class EXUserController {
 		} catch (Exception e) {
 			e.printStackTrace();
 			response.put("type", "error");
-			response.put("message", "Something went wrong !");
+			response.put("message", "Password Must contains 1 Upper Case, 1 Lowe Case & 1 Numeric Value & in Between 8-15 Charachter");
 			return CompletableFuture.completedFuture(response);
 		}
 
