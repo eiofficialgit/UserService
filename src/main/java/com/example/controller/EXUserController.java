@@ -67,6 +67,7 @@ public class EXUserController {
 	@Async("asyncExecutor")
 	public CompletableFuture<HashMap<String, String>> validateUserConditions(EXUser parent) {
 		HashMap<String, String> response = new HashMap<>();
+		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+parent.getPassword(),String.class);
 		try {
 			if (parent == null) {
 				response.put("type", "error");
@@ -109,11 +110,15 @@ public class EXUserController {
 				response.put("type", "error");
 				response.put("message", "Invalid TimeZone");
 				return CompletableFuture.completedFuture(response);
+			} else if (parent.getPassword() == null || !p.matcher(decryptPassword).matches()) {
+				response.put("type", "error");
+				response.put("message", "Password Must contains 1 Upper Case, 1 Lower Case & 1 Numeric Value & in Between 8-15 Charachter");
+				return CompletableFuture.completedFuture(response);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			response.put("type", "error");
-			response.put("message", "Something went wrong!!");
+			response.put("message", "Password Must contains 1 Upper Case, 1 Lower Case & 1 Numeric Value & in Between 8-15 Charachter");
 			return CompletableFuture.completedFuture(response);
 		}
 
@@ -141,16 +146,11 @@ public class EXUserController {
 //		 @RequestMapping(value = "/validateUserCreation",method = RequestMethod.POST)
 	@PostMapping("/validateUserCreation")
 	public ResponseEntity<Object> validateUserCreation(@RequestBody EXUser requestData) {
-//				HttpSession session = request.getSession(true);
+//				
 		ResponseBean responseBean = new ResponseBean();
-//				EXUser usersession = (EXUser) session.getAttribute("user");
-//				JSONObject userData = new JSONObject(requestData);
 		
 		
-		EXUser requestData1 = (EXUser) httpSession.getAttribute("EXUser");
-		
-		
-		
+		EXUser requestData1 = (EXUser) httpSession.getAttribute("EXUser");	
 		try {
 			EXUser checkUser = userRepo.findByUserid(((EXUser) requestData1).getUserid().toLowerCase());
 			ArrayList isValidUser = new ArrayList<>();
@@ -1023,16 +1023,6 @@ public class EXUserController {
 	            session.invalidate();
 	     }
 		 return ResponseEntity.ok(new ResponseBean("success", "Logout Successfully!!", "ManagementHome"));
-	}
-	
-	@PostMapping("/checkpassword")
-	public ResponseEntity<ResponseBean> checkPassword(@RequestBody EXUser login) {
-		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+login.getPassword(),String.class);
-		if (decryptPassword == null || !p.matcher(decryptPassword).matches() ) {
-			return ResponseEntity.ok(new ResponseBean("Error", "Password Must contains 1 Upper Case, 1 Lower Case & 1 Numeric Value & in Between 8-15 Charachter", "checkpassword"));
-		}else {
-			return ResponseEntity.ok(new ResponseBean("Success", "Valid Password", "checkpassword"));
-		}
 	}
 	
 }
