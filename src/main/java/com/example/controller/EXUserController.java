@@ -86,11 +86,6 @@ public class EXUserController {
 				response.put("type", "error");
 				response.put("message", "User Id Must be Required");
 				return CompletableFuture.completedFuture(response);
-			} else if (!p.matcher(decryptPassword).matches()) {
-				response.put("type", "error");
-				response.put("message",
-						"Password Must contains 1 Upper Case, 1 Lowe Case & 1 Numeric Value & in Between 8-15 Charachter");
-				return CompletableFuture.completedFuture(response);
 			} else if (parent.getFirstName() == null || parent.getFirstName().isEmpty()) {
 				response.put("type", "error");
 				response.put("message", "Enter FirstName");
@@ -114,6 +109,11 @@ public class EXUserController {
 			} else if (parent.getTimeZone().equalsIgnoreCase(null) || parent.getTimeZone().equalsIgnoreCase("")) {
 				response.put("type", "error");
 				response.put("message", "Invalid TimeZone");
+				return CompletableFuture.completedFuture(response);
+			} else if (!p.matcher(decryptPassword).matches()) {
+				response.put("type", "error");
+				response.put("message",
+						"Password Must contains 1 Upper Case, 1 Lowe Case & 1 Numeric Value & in Between 8-15 Charachter");
 				return CompletableFuture.completedFuture(response);
 			}
 		} catch (Exception e) {
