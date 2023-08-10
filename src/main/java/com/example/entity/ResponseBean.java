@@ -15,8 +15,8 @@ import lombok.Setter;
 @Setter
 public class ResponseBean {
 	
-	private String type;
-	private Object message;
-	private String title;
+	private String status;
+	private String data;
+	private String message;
 
 }

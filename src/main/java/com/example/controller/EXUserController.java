@@ -9,7 +9,10 @@ import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -22,7 +25,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import com.example.entity.DecryptResponse;
 import com.example.entity.EXUser;
+import com.example.entity.EncodedPayload;
 import com.example.entity.Partnership;
 import com.example.entity.ResponseBean;
 import com.example.entity.UserStake;
@@ -164,9 +169,9 @@ public class EXUserController {
 				e.printStackTrace();
 			}
 			if (conditionsReturn.containsKey("type") && conditionsReturn.get("type").equalsIgnoreCase("error")) {
-				responseBean.setType(conditionsReturn.get("type"));
+				responseBean.setData(conditionsReturn.get("type"));
 				responseBean.setMessage(conditionsReturn.get("message"));
-				responseBean.setTitle("Error");
+				responseBean.setStatus("Error");
 				return new ResponseEntity<Object>(responseBean, HttpStatus.ACCEPTED);
 			}
 			if (((EXUser) requestData1).getUsertype() == 0) {
@@ -190,54 +195,54 @@ public class EXUserController {
 //								}
 //								
 //								webRepo.save(web);
-					responseBean.setType("success");
+					responseBean.setData("success");
 					responseBean.setMessage("Success");
-					responseBean.setTitle("Success");
+					responseBean.setStatus("Success");
 					return new ResponseEntity<Object>(responseBean, HttpStatus.OK);
 				}
 			} else if (((EXUser) requestData1).getUsertype() == 1) {
 				requestData = saveMiniAdmin(requestData);
 				if (requestData.getUserid() != null) {
 					userRepo.save(requestData);
-					responseBean.setType("success");
+					responseBean.setData("success");
 					responseBean.setMessage("Success");
-					responseBean.setTitle("Success");
+					responseBean.setStatus("Success");
 					return new ResponseEntity<Object>(responseBean, HttpStatus.OK);
 				}
 			}else if(((EXUser) requestData1).getUsertype() == 2){
 				checkUser = saveSuperSuper(requestData);
 				if(checkUser.getUserid()!=null){
 					userRepo.save(checkUser);
-					responseBean.setType("success");
+					responseBean.setData("success");
 					responseBean.setMessage("Success");
-					responseBean.setTitle("Success");
+					responseBean.setStatus("Success");
 					return new ResponseEntity<Object>(responseBean,HttpStatus.OK);
 				}
 			}else if(((EXUser) requestData1).getUsertype() == 3){
 				checkUser = saveSuperMaster(requestData);
 				if(checkUser.getUserid()!=null){
 					userRepo.save(checkUser);
-					responseBean.setType("success");
+					responseBean.setData("success");
 					responseBean.setMessage("Success");
-					responseBean.setTitle("Success");
+					responseBean.setStatus("Success");
 					return new ResponseEntity<Object>(responseBean,HttpStatus.OK);
 				}
 			}else if(((EXUser) requestData1).getUsertype() == 4){
 				checkUser = saveMaster(requestData);
 				if(checkUser.getUserid()!=null){
 					userRepo.save(checkUser);
-					responseBean.setType("success");
+					responseBean.setData("success");
 					responseBean.setMessage("Success");
-					responseBean.setTitle("Success");
+					responseBean.setStatus("Success");
 					return new ResponseEntity<Object>(responseBean,HttpStatus.OK);
 				}
 			}else if(((EXUser) requestData1).getUsertype() == 5){
 				checkUser = saveUser(requestData);
 				if(checkUser.getUserid()!=null){
 					userRepo.save(checkUser);
-					responseBean.setType("success");
+					responseBean.setData("success");
 					responseBean.setMessage("Success");
-					responseBean.setTitle("Success");
+					responseBean.setStatus("Success");
 					return new ResponseEntity<Object>(responseBean,HttpStatus.OK);
 				}
 			}
@@ -246,9 +251,9 @@ public class EXUserController {
 			// TODO: handle exception
 			e.printStackTrace();
 		}
-		responseBean.setType("error");
+		responseBean.setData("error");
 		responseBean.setMessage("Not Authorized to Create this type of User");
-		responseBean.setTitle("Error");
+		responseBean.setStatus("Error");
 		return new ResponseEntity<Object>(responseBean, HttpStatus.ACCEPTED);
 
 	}
@@ -764,25 +769,36 @@ public class EXUserController {
 	
 	
 	@PostMapping("/managementHome")
-	public ResponseEntity<ResponseBean> managementHome(@RequestBody EXUser login) {
-		String decryptUserId = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+login.getUserid(),String.class);
-		EXUser users = authenticaterepo.findByUserid(decryptUserId);
+	public ResponseEntity<ResponseBean> managementHome(@RequestBody EncodedPayload payload) {
+		/*String payloads=payload.getPayload();
+		EXUser decryptUserData = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decryptPayload",EXUser.class);*/
+		
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+	    DecryptResponse decryptData = restTemplate.postForObject(decryptUrl, requestEntity, DecryptResponse.class);
+	    String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptData.getPassword(),String.class);
+		EXUser users = authenticaterepo.findByUserid(decryptData.getUserid());
 		
 		//user name null or wrong
 		if(users==null) {
-			ResponseBean reponsebean=ResponseBean.builder().title("ManagementHome").type("Error").message("Wrong UserId!!!").build();
+			ResponseBean reponsebean=ResponseBean.builder().data("ManagementHome").status("Error").message("Wrong UserId!!!").build();
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.UNAUTHORIZED);
 		}
 		
 		//user password null or wrong
-		if(!users.getPassword().equals(login.getPassword())) {
-			ResponseBean reponsebean=ResponseBean.builder().title("ManagementHome").type("Error").message("Wrong password!!!").build();
+		if(!users.getPassword().equals(encryptPassword)) {
+			ResponseBean reponsebean=ResponseBean.builder().data("ManagementHome").status("Error").message("Wrong password!!!").build();
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.UNAUTHORIZED);
 		}
 		
 		httpSession.setAttribute("EXUser", users);
+		String  encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+		HttpEntity<EXUser> userRequestEntity = new HttpEntity<>(users, headers);
+		String encryptUserData = restTemplate.postForObject(encryptUrl, userRequestEntity, String.class);
 
-		ResponseBean reponsebean=ResponseBean.builder().title("ManagementHome").type("success").message(httpSession.getAttribute("EXUser")).build();
+		ResponseBean reponsebean=ResponseBean.builder().data(encryptUserData).status("success").message("User login Successfull!!").build();
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	}
 	
