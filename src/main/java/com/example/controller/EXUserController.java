@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
+
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -35,6 +37,10 @@ import com.example.entity.WebsiteBean;
 import com.example.repository.Authenticaterepo;
 import com.example.repository.EXUserRepository;
 import com.example.repository.WebsiteBeanRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonParser;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -628,7 +634,7 @@ public class EXUserController {
 			child.setLastName(user.getLastName());
 			child.setTimeZone(user.getTimeZone());
 			child.setEmail(user.getEmail());
-			child.setExposureLimit(0.0);
+			child.setExposureLimit(0.0); 
 			
 			Partnership childPartnership = new Partnership();
 			
@@ -976,12 +982,21 @@ public class EXUserController {
 		// }
 	
 	@PostMapping("/checkuser")
-	public ResponseEntity<ResponseBean> checkuser(@RequestBody EXUser login) {
-		EXUser users = userRepo.findByUserid(login.getUserid());
-		if (users != null && users.getUserid().equals(login.getUserid())) {
-			return ResponseEntity.ok(new ResponseBean("Error", "User already exist!!", "CheckUser"));
+	public ResponseEntity<ResponseBean> checkuser(@RequestBody EncodedPayload payload) {
+		
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+	    DecryptResponse decryptData = restTemplate.postForObject(decryptUrl, requestEntity, DecryptResponse.class);
+	  
+		EXUser users = authenticaterepo.findByUserid(decryptData.getUserid());
+		if (users != null && users.getUserid().equals(decryptData.getUserid())) {
+			ResponseBean reponsebean=ResponseBean.builder().data("CheckUser").status("Error").message("User already exist!!").build();
+			return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		} else {
-			return ResponseEntity.ok(new ResponseBean("Success", "Valid User", "CheckUser"));
+			ResponseBean reponsebean=ResponseBean.builder().data("CheckUser").status("success").message("Valid User").build();
+			return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		}
 	}	
 	
@@ -998,27 +1013,66 @@ public class EXUserController {
 	}
 
 	@GetMapping("/allWebsite")
-	public List<WebsiteBean> listOfWebsite() {
+	public ResponseEntity<ResponseBean> listOfWebsite() {
 		List<WebsiteBean> findAll = webRepo.findAll();
-		return findAll;
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    EncodedPayload encodedPayload=new EncodedPayload();
+	    Gson gson = new Gson();
+		String data = gson.toJson(findAll);
+		JsonArray jsonArray = new JsonParser().parse(data).getAsJsonArray();
+		JSONObject jObj = new JSONObject();
+		jObj.put("data", jsonArray);
+	    encodedPayload.setPayload(jObj.toString());
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
+	    String encryptwebsiteData = restTemplate.postForObject(decryptUrl, requestEntity, String.class);
+	    ResponseBean reponsebean=ResponseBean.builder().data(encryptwebsiteData).status("success").message("All Childs fetch Successfull!!").build();
+		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	}
 	
 	@GetMapping("/allchild")
-	public List<EXUser> listUserType( ){
+	public ResponseEntity<ResponseBean> listUserType( ){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		Integer usertype = parent.getUsertype()+1;
 		List<EXUser> findByUsertype = userRepo.findByUsertype(usertype);
-		return findByUsertype;
+		String encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		EncodedPayload encodedPayload=new EncodedPayload();
+		Gson gson = new Gson();
+		String data = gson.toJson(findByUsertype);
+		JsonArray jsonArray = new JsonParser().parse(data).getAsJsonArray();
+		JSONObject jObj = new JSONObject();
+		jObj.put("data", jsonArray);
+	    encodedPayload.setPayload(jObj.toString());
+		HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
+		String encryptData = restTemplate.postForObject(encryptUrl, requestEntity, String.class);
+		ResponseBean reponsebean=ResponseBean.builder().data(encryptData).status("success").message("All Childs fetch Successfull!!").build();
+		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	}
 
 	@GetMapping("/allchildwithpagination")
-	public List<EXUser> listUserTypeWithPagination( @RequestParam("page") int page, @RequestParam("size") int size) {
+	public ResponseEntity<ResponseBean> listUserTypeWithPagination( @RequestParam("page") int page, @RequestParam("size") int size) {
 	    EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 	    Integer usertype = parent.getUsertype() + 1;
 	    PageRequest pageable = PageRequest.of(page, size);
 	    Page<EXUser> findByUsertype = userRepo.findByUsertype(usertype, pageable);
 	    List<EXUser> users = findByUsertype.getContent();
-	    return users;
+	    String encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		EncodedPayload encodedPayload=new EncodedPayload();
+		Gson gson = new Gson();
+		String data = gson.toJson(users);
+		JsonArray jsonArray = new JsonParser().parse(data).getAsJsonArray();
+		JSONObject jObj = new JSONObject();
+	    jObj.put("data", jsonArray);
+	    encodedPayload.setPayload(jObj.toString());
+		HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
+		String encryptData = restTemplate.postForObject(encryptUrl, requestEntity, String.class);
+		ResponseBean reponsebean=ResponseBean.builder().data(encryptData).status("success").message("All Childs fetch Successfull!!").build();
+		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	}
 	
 	@GetMapping("/{parentId}/{usertype}")

@@ -1,5 +1,7 @@
 package com.example.entity;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,5 +12,5 @@ import lombok.NoArgsConstructor;
 public class EncodedPayload {
 	
 	private String payload;
-
+	
 }

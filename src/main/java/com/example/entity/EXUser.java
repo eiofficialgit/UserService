@@ -4,6 +4,8 @@ import java.util.Date;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
@@ -11,12 +13,10 @@ import lombok.Data;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Data
 public class EXUser {
-	
+
 	@Id
 	private String id;
-	
-	private String payload;
-	
+
 	private String websitename;
 	 
 	private String email;
@@ -27,6 +27,7 @@ public class EXUser {
 		 
 	private String userid;
  
+	@JsonIgnore
 	private String password;
 	 
 	private  Integer usertype;
