@@ -276,13 +276,14 @@ public class EXUserController {
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		
 		EXUser child = new EXUser();
+		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
+		child.setPassword(encryptPassword);
 		try {
 
 			// child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 			// child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 			child.setWebsitename(user.getWebsitename());
 			child.setUserid(user.getUserid());			
-			child.setPassword(user.getPassword());
 			child.setUsertype(1);
 			// child.setAccType(EXConstants.SUB_ADMIN);
 			child.setAccountLock(false);
@@ -349,6 +350,8 @@ public class EXUserController {
 		
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser child = new EXUser();
+		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
+		child.setPassword(encryptPassword);
 		try {
 
 			// child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
@@ -357,7 +360,7 @@ public class EXUserController {
 			// Date()), "GMT", "IST")));
 			child.setWebsitename(user.getWebsitename());
 			child.setUserid(user.getUserid());			
-			child.setPassword(user.getPassword());
+			
 			child.setUsertype(2);
 			child.setChildLiab(0.0);
 			// child.setAccType(EXConstants.MINI_ADMIN);
@@ -424,6 +427,8 @@ public class EXUserController {
 	public EXUser saveSuperSuper(EXUser user){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser child = new EXUser();
+		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
+		child.setPassword(encryptPassword);
 		try {
 
 			// child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
@@ -432,7 +437,7 @@ public class EXUserController {
 			// Date()), "GMT", "IST")));
 			child.setWebsitename(user.getWebsitename());
 			child.setUserid(user.getUserid());			
-			child.setPassword(user.getPassword());
+			
 			child.setUsertype(3);
 			child.setChildLiab(0.0);
 //			child.setAccType(EXConstants.SUPER_SUPER);
@@ -503,12 +508,14 @@ public class EXUserController {
 	public EXUser saveSuperMaster(EXUser user){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser child = new EXUser();
+		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
+		child.setPassword(encryptPassword);
 		try{
 //			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 //			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 			child.setWebsitename(user.getWebsitename());
 			child.setUserid(user.getUserid());
-			child.setPassword(user.getPassword());
+			
 			child.setUsertype(4);
 			child.setChildLiab(0.0);
 //			child.setAccType(EXConstants.SUPER_MASTER);
@@ -580,12 +587,14 @@ public class EXUserController {
 	public EXUser saveMaster(EXUser user){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser child = new EXUser();
+		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
+		child.setPassword(encryptPassword);
 		try{
 //			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 //			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 			child.setWebsitename(user.getWebsitename());
 			child.setUserid(user.getUserid());
-			child.setPassword(user.getPassword());
+			
 			child.setUsertype(5);
 			child.setChildLiab(0.0);
 //			child.setAccType(EXConstants.MASTER);
@@ -656,12 +665,14 @@ public class EXUserController {
 	public EXUser saveUser(EXUser user){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser child = new EXUser();
+		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
+		child.setPassword(encryptPassword);
 		try{
 //			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 //			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 			child.setWebsitename(user.getWebsitename());
 			child.setUserid(user.getUserid());
-			child.setPassword(user.getPassword());
+			
 			child.setUsertype(6);
 			child.setChildLiab(0.0);
 //			child.setAccType(EXConstants.USER);
@@ -1019,7 +1030,7 @@ public class EXUserController {
 	    encodedPayload.setPayload(jObj.toString());
 	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
 	    String encryptwebsiteData = restTemplate.postForObject(decryptUrl, requestEntity, String.class);
-	    ResponseBean reponsebean=ResponseBean.builder().data(encryptwebsiteData).status("success").message("All Childs fetch Successfull!!").build();
+	    ResponseBean reponsebean=ResponseBean.builder().data(encryptwebsiteData).status("success").message("All website fetch Successfull!!").build();
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	}
 	
@@ -1051,7 +1062,7 @@ public class EXUserController {
 	    PageRequest pageable = PageRequest.of(page, size);
 	    Page<EXUser> findByUsertype = userRepo.findByUsertype(usertype, pageable);
 	    List<EXUser> users = findByUsertype.getContent();
-	    String encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+	    String encryptUrl = "http://encryptdecrypt-ms/api/encryptPayload";
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 		EncodedPayload encodedPayload=new EncodedPayload();
