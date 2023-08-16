@@ -116,10 +116,10 @@ public class EXUserController {
 					response.put("type", "error");
 					response.put("message", "Mobile Number Must Be Of 10 Digit");
 					return CompletableFuture.completedFuture(response);
-			} else if (childData.getExposureLimit() == null) {
-				response.put("type", "error");
-				response.put("message", "Invalid Exposure Limit");
-				return CompletableFuture.completedFuture(response);
+//			} else if (childData.getExposureLimit() == null) {
+//				response.put("type", "error");
+//				response.put("message", "Invalid Exposure Limit");
+//				return CompletableFuture.completedFuture(response);
 //				}else if(parent.getc.equalsIgnoreCase(null) || userData.getString("userComm").equalsIgnoreCase("")){
 //					response.put("type","error");
 //					response.put("message","Invalid Commission");
@@ -136,10 +136,18 @@ public class EXUserController {
 			response.put("message", "Something went wrong!!");	
 			return CompletableFuture.completedFuture(response);
 		}
+		EXUser findByUserid = userRepo.findByUserid(childData.getUserid().toLowerCase());
+		if(findByUserid==null) {
+			return CompletableFuture.completedFuture(response);
+		}else {
+			response.put("type", "error");
+			response.put("message", "User Id Exist!!!");
+			return CompletableFuture.completedFuture(response);
+		}
 
-		response.put("type", "success");
-		response.put("message", "Pass");
-		return CompletableFuture.completedFuture(response);
+//		response.put("type", "success");
+//		response.put("message", "Pass");
+//		return CompletableFuture.completedFuture(response);
 	}
 
 	public boolean isValidEmailAddress(String email) {
@@ -1056,27 +1064,36 @@ public class EXUserController {
 	}
 
 	@GetMapping("/allchildwithpagination")
-	public ResponseEntity<ResponseBean> listUserTypeWithPagination( @RequestParam("page") int page, @RequestParam("size") int size) {
+	public ResponseEntity<ResponseBean> listUserTypeWithPagination(@RequestParam("pageNumber") int pageNumber,@RequestParam("pageSize") int pageSize) {
 	    EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 	    Integer usertype = parent.getUsertype() + 1;
-	    PageRequest pageable = PageRequest.of(page, size);
+	    Pageable pageable = PageRequest.of(pageNumber, pageSize);
 	    Page<EXUser> findByUsertype = userRepo.findByUsertype(usertype, pageable);
-	    List<EXUser> users = findByUsertype.getContent();
-	    String encryptUrl = "http://encryptdecrypt-ms/api/encryptPayload";
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
-		EncodedPayload encodedPayload=new EncodedPayload();
-		Gson gson = new Gson();
-		String data = gson.toJson(users);
-		JsonArray jsonArray = new JsonParser().parse(data).getAsJsonArray();
-		JSONObject jObj = new JSONObject();
-	    jObj.put("data", jsonArray);
-	    encodedPayload.setPayload(jObj.toString());
-		HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
-		String encryptData = restTemplate.postForObject(encryptUrl, requestEntity, String.class);
-		ResponseBean reponsebean=ResponseBean.builder().data(encryptData).status("success").message("All Childs fetch Successfull!!").build();
-		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+	    EXUserResponse response = new EXUserResponse();
+	    List<EXUser> content = findByUsertype.getContent();
+	    response.setContent(content);
+	    response.setPageNumber(findByUsertype.getNumber());
+	    response.setPageSize(findByUsertype.getSize());
+	    response.setTotalElements(findByUsertype.getTotalElements());
+	    response.setTotalPages(findByUsertype.getTotalPages());
+	    response.setLastPage(findByUsertype.isLast());
+	    String encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+	    HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    Gson gson = new Gson();
+	    String data = gson.toJson(response);
+	    EncodedPayload encodedPayload = new EncodedPayload();
+	    encodedPayload.setPayload(data);
+	    JsonObject jsonObject = new JsonParser().parse(data).getAsJsonObject();
+		JSONObject jObj = new JSONObject();	
+	    jObj.put("data", jsonObject);
+	    response.setPayload(jObj.toString());
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
+	    String encryptData = restTemplate.postForObject(encryptUrl, requestEntity, String.class);
+	    ResponseBean responseBean = ResponseBean.builder().data(encryptData).status("success").message("All Childs fetch Successful!!").build();
+	    return new ResponseEntity<>(responseBean, HttpStatus.OK);
 	}
+
 	
 	@GetMapping("/{parentId}/{usertype}")
 	public ResponseEntity<List<EXUser>> listOnHierarchy(@PathVariable String parentId, @PathVariable Integer usertype){

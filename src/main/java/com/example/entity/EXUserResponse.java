@@ -17,6 +17,7 @@ public class EXUserResponse {
 	private long totalElements;
 	private int totalPages;
 	private boolean lastPage;
+	private String payload;
 	
 	
 
