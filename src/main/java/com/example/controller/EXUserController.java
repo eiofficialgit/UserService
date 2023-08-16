@@ -1045,27 +1045,19 @@ public class EXUserController {
 	}
 
 	@GetMapping("/allchildwithpagination")
-	public ResponseEntity<ResponseBean> listUserTypeWithPagination( @RequestParam("pageNumber") int pageNumber, @RequestParam("pageSize") int pageSize) {
+	public ResponseEntity<ResponseBean> listUserTypeWithPagination( @RequestParam("page") int page, @RequestParam("size") int size) {
 	    EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 	    Integer usertype = parent.getUsertype() + 1;
-	    Pageable pageable = PageRequest.of(pageNumber, pageSize);
-	    Page<EXUser> pagePost = userRepo.findAll(pageable);
-	    Page<EXUser> findByUsertype = userRepo.findByUsertype(usertype,pageable);
-	    List<EXUser> content = findByUsertype.getContent();
-	    EXUserResponse response = new EXUserResponse();
-	    response.setContent(content);
-	    response.setPageNumber(pagePost.getNumber());
-	    response.setPageSize(pagePost.getSize());
-	    response.setTotalElements(pagePost.getTotalElements());
-	    response.setTotalPages(pagePost.getTotalPages());
-	    response.setLastPage(pagePost.isLast());
+	    PageRequest pageable = PageRequest.of(page, size);
+	    Page<EXUser> findByUsertype = userRepo.findByUsertype(usertype, pageable);
+	    List<EXUser> users = findByUsertype.getContent();
 	    String encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 		EncodedPayload encodedPayload=new EncodedPayload();
 		Gson gson = new Gson();
-		String data = gson.toJson(findByUsertype);
-		JsonObject jsonArray = new JsonParser().parse(data).getAsJsonObject();
+		String data = gson.toJson(users);
+		JsonArray jsonArray = new JsonParser().parse(data).getAsJsonArray();
 		JSONObject jObj = new JSONObject();
 	    jObj.put("data", jsonArray);
 	    encodedPayload.setPayload(jObj.toString());
