@@ -11,6 +11,7 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -29,10 +30,12 @@ import org.springframework.web.client.RestTemplate;
 
 import com.example.entity.DecryptResponse;
 import com.example.entity.EXUser;
+import com.example.entity.EXUserResponse;
 import com.example.entity.EncodedPayload;
 import com.example.entity.Partnership;
 import com.example.entity.ResponseBean;
 import com.example.entity.UserStake;
+import com.example.entity.validationModel;
 import com.example.entity.WebsiteBean;
 import com.example.repository.Authenticaterepo;
 import com.example.repository.EXUserRepository;
@@ -40,6 +43,7 @@ import com.example.repository.WebsiteBeanRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -76,40 +80,43 @@ public class EXUserController {
 	Pattern p1= Pattern.compile(regex1);
 
 	@Async("asyncExecutor")
-	public CompletableFuture<HashMap<String, String>> validateUserConditions(EXUser parent) {
+	public CompletableFuture<HashMap<String, String>> validateUserConditions(EXUser childData) {
 		HashMap<String, String> response = new HashMap<>();
-		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+parent.getPassword(),String.class);
 		try {
-			if (parent == null) {
+			if (childData == null) {
 				response.put("type", "error");
 				response.put("message", "Invalid User Data");
 				return CompletableFuture.completedFuture(response);
 			}
-			if (parent.getWebsitename().equalsIgnoreCase("") || parent.getWebsitename().length() < 1) {
+			if (childData.getWebsitename().equalsIgnoreCase("") || childData.getWebsitename().length() < 1) {
 				response.put("type", "error");
 				response.put("message", "WebsiteName Must be Required");
 				return CompletableFuture.completedFuture(response);
-			} else if (parent.getEmail() == null || !isValidEmailAddress(parent.getEmail())) {
+			} else if (childData.getEmail() == null || !isValidEmailAddress(childData.getEmail())) {
 				response.put("type", "error");
 				response.put("message", "Invalid Email Address");
 				return CompletableFuture.completedFuture(response);
-			} else if (parent.getUserid().equalsIgnoreCase(null) || parent.getUserid().equalsIgnoreCase("")) {
+			} else if (childData.getUserid().equalsIgnoreCase(null) || childData.getUserid().equalsIgnoreCase("")) {
 				response.put("type", "error");
 				response.put("message", "User Id Must be Required");
 				return CompletableFuture.completedFuture(response);
-			} else if (parent.getFirstName() == null || parent.getFirstName().isEmpty()) {
+			} else if (childData.getPassword() == null || p.matcher(childData.getPassword()).matches()== false) {
+				response.put("type", "error");
+				response.put("message", "Password Must contains 1 Upper Case, 1 Lower Case & 1 Numeric Value & in Between 8-15 Charachter");
+				return CompletableFuture.completedFuture(response);
+			} else if (childData.getFirstName() == null || childData.getFirstName().isEmpty()) {
 				response.put("type", "error");
 				response.put("message", "Enter FirstName");
 				return CompletableFuture.completedFuture(response);
-			} else if (parent.getLastName() == null || parent.getLastName().isEmpty()) {
+			} else if (childData.getLastName() == null || childData.getLastName().isEmpty()) {
 				response.put("type", "error");
 				response.put("message", "Enter LastName");
 				return CompletableFuture.completedFuture(response);
-			} else if (parent.getMobileNumber() == null || parent.getMobileNumber().length()>10 || parent.getMobileNumber().length()<10 || !isValidMobileNumber(parent.getMobileNumber())) {
+			} else if (childData.getMobileNumber() == null || childData.getMobileNumber().length()>10 || childData.getMobileNumber().length()<10 || !isValidMobileNumber(childData.getMobileNumber())) {
 					response.put("type", "error");
 					response.put("message", "Mobile Number Must Be Of 10 Digit");
 					return CompletableFuture.completedFuture(response);
-			} else if (parent.getExposureLimit() == null) {
+			} else if (childData.getExposureLimit() == null) {
 				response.put("type", "error");
 				response.put("message", "Invalid Exposure Limit");
 				return CompletableFuture.completedFuture(response);
@@ -117,19 +124,16 @@ public class EXUserController {
 //					response.put("type","error");
 //					response.put("message","Invalid Commission");
 //					return CompletableFuture.completedFuture(response);
-			} else if (parent.getTimeZone().equalsIgnoreCase(null) || parent.getTimeZone().equalsIgnoreCase("")) {
+			} else if (childData.getTimeZone().equalsIgnoreCase(null) || childData.getTimeZone().equalsIgnoreCase("")) {
 				response.put("type", "error");
 				response.put("message", "Invalid TimeZone");
 				return CompletableFuture.completedFuture(response);
-			} else if (parent.getPassword() == null || !p.matcher(decryptPassword).matches()) {
-				response.put("type", "error");
-				response.put("message", "Password Must contains 1 Upper Case, 1 Lower Case & 1 Numeric Value & in Between 8-15 Charachter");
-				return CompletableFuture.completedFuture(response);
+			
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			response.put("type", "error");
-			response.put("message", "Password Must contains 1 Upper Case, 1 Lower Case & 1 Numeric Value & in Between 8-15 Charachter");
+			response.put("message", "Something went wrong!!");	
 			return CompletableFuture.completedFuture(response);
 		}
 
@@ -156,17 +160,21 @@ public class EXUserController {
 //		 @ResponseBody
 //		 @RequestMapping(value = "/validateUserCreation",method = RequestMethod.POST)
 	@PostMapping("/validateUserCreation")
-	public ResponseEntity<Object> validateUserCreation(@RequestBody EXUser requestData) {
-//				
+	public ResponseEntity<Object> validateUserCreation(@RequestBody EncodedPayload payload) {			
+		EXUser parentData = (EXUser) httpSession.getAttribute("EXUser");	
 		ResponseBean responseBean = new ResponseBean();
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+	    EXUser childData = restTemplate.postForObject(decryptUrl, requestEntity, EXUser.class);
 		
 		
-		EXUser requestData1 = (EXUser) httpSession.getAttribute("EXUser");	
 		try {
-			EXUser checkUser = userRepo.findByUserid(((EXUser) requestData1).getUserid().toLowerCase());
+			EXUser checkUser = userRepo.findByUserid(((EXUser) parentData).getUserid().toLowerCase());
 			ArrayList isValidUser = new ArrayList<>();
 
-			CompletableFuture<HashMap<String, String>> conditions = validateUserConditions(requestData);
+			CompletableFuture<HashMap<String, String>> conditions = validateUserConditions(childData);
 			CompletableFuture.allOf(conditions).join();
 			HashMap<String, String> conditionsReturn = new HashMap<>();
 			try {
@@ -180,7 +188,7 @@ public class EXUserController {
 				responseBean.setStatus("Error");
 				return new ResponseEntity<Object>(responseBean, HttpStatus.ACCEPTED);
 			}
-			if (((EXUser) requestData1).getUsertype() == 0) {
+			if (((EXUser) parentData).getUsertype() == 0) {
 //							WebsiteBean webbean = new WebsiteBean();
 //							WebsiteBean web = webRepo.findByid(webbean.getId());
 //							if(web == null){
@@ -190,14 +198,14 @@ public class EXUserController {
 //								return new ResponseEntity<Object>(responseBean,HttpStatus.ACCEPTED);
 //							}
 
-				requestData = saveSubAdmin(requestData);
-				if (requestData.getUserid() != null) {
-					userRepo.save(requestData);
+				childData = saveSubAdmin(childData);
+				if (childData.getUserid() != null) {
+					userRepo.save(childData);
 //								web.setIsUsed(true);
 //								if(web.getUsedBy().equalsIgnoreCase("-")){
-//									web.setUsedBy(requestData.getUserid()+"("+requestData.getUsername()+")");
+//									web.setUsedBy(childData.getUserid()+"("+childData.getUsername()+")");
 //								}else{
-//									web.setUsedBy(web.getUsedBy()+", "+requestData.getUserid()+"("+requestData.getUsername()+")");
+//									web.setUsedBy(web.getUsedBy()+", "+childData.getUserid()+"("+childData.getUsername()+")");
 //								}
 //								
 //								webRepo.save(web);
@@ -206,17 +214,17 @@ public class EXUserController {
 					responseBean.setStatus("Success");
 					return new ResponseEntity<Object>(responseBean, HttpStatus.OK);
 				}
-			} else if (((EXUser) requestData1).getUsertype() == 1) {
-				requestData = saveMiniAdmin(requestData);
-				if (requestData.getUserid() != null) {
-					userRepo.save(requestData);
+			} else if (((EXUser) parentData).getUsertype() == 1) {
+				childData = saveMiniAdmin(childData);
+				if (childData.getUserid() != null) {
+					userRepo.save(childData);
 					responseBean.setData("success");
 					responseBean.setMessage("Success");
 					responseBean.setStatus("Success");
 					return new ResponseEntity<Object>(responseBean, HttpStatus.OK);
 				}
-			}else if(((EXUser) requestData1).getUsertype() == 2){
-				checkUser = saveSuperSuper(requestData);
+			}else if(((EXUser) parentData).getUsertype() == 2){
+				checkUser = saveSuperSuper(childData);
 				if(checkUser.getUserid()!=null){
 					userRepo.save(checkUser);
 					responseBean.setData("success");
@@ -224,8 +232,8 @@ public class EXUserController {
 					responseBean.setStatus("Success");
 					return new ResponseEntity<Object>(responseBean,HttpStatus.OK);
 				}
-			}else if(((EXUser) requestData1).getUsertype() == 3){
-				checkUser = saveSuperMaster(requestData);
+			}else if(((EXUser) parentData).getUsertype() == 3){
+				checkUser = saveSuperMaster(childData);
 				if(checkUser.getUserid()!=null){
 					userRepo.save(checkUser);
 					responseBean.setData("success");
@@ -233,8 +241,8 @@ public class EXUserController {
 					responseBean.setStatus("Success");
 					return new ResponseEntity<Object>(responseBean,HttpStatus.OK);
 				}
-			}else if(((EXUser) requestData1).getUsertype() == 4){
-				checkUser = saveMaster(requestData);
+			}else if(((EXUser) parentData).getUsertype() == 4){
+				checkUser = saveMaster(childData);
 				if(checkUser.getUserid()!=null){
 					userRepo.save(checkUser);
 					responseBean.setData("success");
@@ -242,8 +250,8 @@ public class EXUserController {
 					responseBean.setStatus("Success");
 					return new ResponseEntity<Object>(responseBean,HttpStatus.OK);
 				}
-			}else if(((EXUser) requestData1).getUsertype() == 5){
-				checkUser = saveUser(requestData);
+			}else if(((EXUser) parentData).getUsertype() == 5){
+				checkUser = saveUser(childData);
 				if(checkUser.getUserid()!=null){
 					userRepo.save(checkUser);
 					responseBean.setData("success");
@@ -268,18 +276,13 @@ public class EXUserController {
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		
 		EXUser child = new EXUser();
-		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+user.getPassword(),String.class);
-		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptPassword,String.class);
-		child.setPassword(encryptPassword);
 		try {
 
-			// child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
-			// Date()), "GMT", "IST")));
-			// child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
-			// Date()), "GMT", "IST")));
+			// child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
+			// child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 			child.setWebsitename(user.getWebsitename());
-			child.setUserid(user.getUserid());
-			
+			child.setUserid(user.getUserid());			
+			child.setPassword(user.getPassword());
 			child.setUsertype(1);
 			// child.setAccType(EXConstants.SUB_ADMIN);
 			child.setAccountLock(false);
@@ -346,17 +349,15 @@ public class EXUserController {
 		
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser child = new EXUser();
-		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+user.getPassword(),String.class);
-		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptPassword,String.class);
-		child.setPassword(encryptPassword);
 		try {
+
 			// child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
 			// Date()), "GMT", "IST")));
 			// child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
 			// Date()), "GMT", "IST")));
 			child.setWebsitename(user.getWebsitename());
-			child.setUserid(user.getUserid());
-			
+			child.setUserid(user.getUserid());			
+			child.setPassword(user.getPassword());
 			child.setUsertype(2);
 			child.setChildLiab(0.0);
 			// child.setAccType(EXConstants.MINI_ADMIN);
@@ -423,15 +424,15 @@ public class EXUserController {
 	public EXUser saveSuperSuper(EXUser user){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser child = new EXUser();
-		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+user.getPassword(),String.class);
-		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptPassword,String.class);
-		child.setPassword(encryptPassword);
-		try{
-//			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
-//			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
+		try {
+
+			// child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
+			// Date()), "GMT", "IST")));
+			// child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
+			// Date()), "GMT", "IST")));
 			child.setWebsitename(user.getWebsitename());
-			child.setUserid(user.getUserid());
-			
+			child.setUserid(user.getUserid());			
+			child.setPassword(user.getPassword());
 			child.setUsertype(3);
 			child.setChildLiab(0.0);
 //			child.setAccType(EXConstants.SUPER_SUPER);
@@ -502,15 +503,12 @@ public class EXUserController {
 	public EXUser saveSuperMaster(EXUser user){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser child = new EXUser();
-		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+user.getPassword(),String.class);
-		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptPassword,String.class);
-		child.setPassword(encryptPassword);
 		try{
 //			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 //			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 			child.setWebsitename(user.getWebsitename());
 			child.setUserid(user.getUserid());
-			
+			child.setPassword(user.getPassword());
 			child.setUsertype(4);
 			child.setChildLiab(0.0);
 //			child.setAccType(EXConstants.SUPER_MASTER);
@@ -582,15 +580,12 @@ public class EXUserController {
 	public EXUser saveMaster(EXUser user){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser child = new EXUser();
-		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+user.getPassword(),String.class);
-		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptPassword,String.class);
-		child.setPassword(encryptPassword);
 		try{
 //			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 //			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 			child.setWebsitename(user.getWebsitename());
 			child.setUserid(user.getUserid());
-			
+			child.setPassword(user.getPassword());
 			child.setUsertype(5);
 			child.setChildLiab(0.0);
 //			child.setAccType(EXConstants.MASTER);
@@ -661,15 +656,12 @@ public class EXUserController {
 	public EXUser saveUser(EXUser user){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser child = new EXUser();
-		String decryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+user.getPassword(),String.class);
-		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptPassword,String.class);
-		child.setPassword(encryptPassword);
 		try{
 //			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 //			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 			child.setWebsitename(user.getWebsitename());
 			child.setUserid(user.getUserid());
-			
+			child.setPassword(user.getPassword());
 			child.setUsertype(6);
 			child.setChildLiab(0.0);
 //			child.setAccType(EXConstants.USER);
@@ -1053,19 +1045,27 @@ public class EXUserController {
 	}
 
 	@GetMapping("/allchildwithpagination")
-	public ResponseEntity<ResponseBean> listUserTypeWithPagination( @RequestParam("page") int page, @RequestParam("size") int size) {
+	public ResponseEntity<ResponseBean> listUserTypeWithPagination( @RequestParam("pageNumber") int pageNumber, @RequestParam("pageSize") int pageSize) {
 	    EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 	    Integer usertype = parent.getUsertype() + 1;
-	    PageRequest pageable = PageRequest.of(page, size);
-	    Page<EXUser> findByUsertype = userRepo.findByUsertype(usertype, pageable);
-	    List<EXUser> users = findByUsertype.getContent();
+	    Pageable pageable = PageRequest.of(pageNumber, pageSize);
+	    Page<EXUser> pagePost = userRepo.findAll(pageable);
+	    Page<EXUser> findByUsertype = userRepo.findByUsertype(usertype,pageable);
+	    List<EXUser> content = findByUsertype.getContent();
+	    EXUserResponse response = new EXUserResponse();
+	    response.setContent(content);
+	    response.setPageNumber(pagePost.getNumber());
+	    response.setPageSize(pagePost.getSize());
+	    response.setTotalElements(pagePost.getTotalElements());
+	    response.setTotalPages(pagePost.getTotalPages());
+	    response.setLastPage(pagePost.isLast());
 	    String encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 		EncodedPayload encodedPayload=new EncodedPayload();
 		Gson gson = new Gson();
-		String data = gson.toJson(users);
-		JsonArray jsonArray = new JsonParser().parse(data).getAsJsonArray();
+		String data = gson.toJson(findByUsertype);
+		JsonObject jsonArray = new JsonParser().parse(data).getAsJsonObject();
 		JSONObject jObj = new JSONObject();
 	    jObj.put("data", jsonArray);
 	    encodedPayload.setPayload(jObj.toString());

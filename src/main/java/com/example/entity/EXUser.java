@@ -27,7 +27,6 @@ public class EXUser {
 		 
 	private String userid;
  
-	@JsonIgnore
 	private String password;
 	 
 	private  Integer usertype;
