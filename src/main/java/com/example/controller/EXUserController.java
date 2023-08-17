@@ -137,15 +137,17 @@ public class EXUserController {
 			return CompletableFuture.completedFuture(response);
 		}
 		EXUser findByUserid = userRepo.findByUserid(childData.getUserid().toLowerCase());
-		if(findByUserid!=null) {
+		if(findByUserid==null) {
+			return CompletableFuture.completedFuture(response);
+		}else {
 			response.put("type", "error");
 			response.put("message", "User Id Exist!!!");
 			return CompletableFuture.completedFuture(response);
 		}
 
-		response.put("type", "success");
-		response.put("message", "Pass");
-		return CompletableFuture.completedFuture(response);
+//		response.put("type", "success");
+//		response.put("message", "Pass");
+//		return CompletableFuture.completedFuture(response);
 	}
 
 	public boolean isValidEmailAddress(String email) {
