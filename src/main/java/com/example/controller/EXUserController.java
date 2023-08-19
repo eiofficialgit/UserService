@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -29,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import com.example.entity.DecryptResponse;
+import com.example.entity.DepositWithdraw;
 import com.example.entity.EXUser;
 import com.example.entity.EXUserResponse;
 import com.example.entity.EncodedPayload;
@@ -318,8 +320,8 @@ public class EXUserController {
 			child.setMasterId("0");
 			child.setMasterName("0");
 			child.setMasterUserId("0");
-			child.setMyBalance(0.0);
-			child.setFixLimit(0.0);
+			child.setMyBalance(1000.0);
+			child.setFixLimit(1000.0);
 			child.setMyallPl(0.0);
 			child.setMysportPl(0.0);
 			child.setMycasinoPl(0.0);
@@ -332,7 +334,7 @@ public class EXUserController {
 			child.setLastName(user.getLastName());
 			child.setTimeZone(user.getTimeZone());
 			child.setEmail(user.getEmail());
-			child.setExposureLimit(0.0);
+			child.setExposureLimit(1000.0);
 
 			Partnership childPartnership = new Partnership();
 
@@ -1011,7 +1013,7 @@ public class EXUserController {
 		}
 	}	
 	
-	@PostMapping("/website")
+	@PostMapping("/addWebsite")
 	public ResponseEntity<ResponseBean> saveWebsite(@RequestBody WebsiteBean website) {
 		String name = website.getName();
 		if (webRepo.findByName(name) != null) {
@@ -1114,5 +1116,88 @@ public class EXUserController {
 	     }
 		 return ResponseEntity.ok(new ResponseBean("success", "Logout Successfully!!", "ManagementHome"));
 	}
+	
+	
+	
+	@PutMapping("/creditReference/{userId}")
+	public ResponseEntity<ResponseBean> creditReference(@RequestBody EXUser user, @PathVariable("userId") String userid) {
+		EXUser currentUser = userRepo.findByUserid(userid.toLowerCase());
+		if(user.getPassword().equals(currentUser.getPassword())) {
+			currentUser.setFixLimit(user.getFixLimit());
+			EXUser save = userRepo.save(currentUser);
+			
+			String encryptUrl = "http://encryptdecrypt-ms/api/encryptPayload";
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_JSON);
+			EncodedPayload encodedPayload=new EncodedPayload();
+			Gson gson = new Gson();
+			String data = gson.toJson(save);
+			JsonObject jsonObject = new JsonParser().parse(data).getAsJsonObject();
+			JSONObject jObj = new JSONObject();
+		    jObj.put("data", jsonObject);
+		    encodedPayload.setPayload(jObj.toString());
+			HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
+			String encryptData = restTemplate.postForObject(encryptUrl, requestEntity, String.class);
+			
+			ResponseBean reponsebean=ResponseBean.builder().data(encryptData).status("success").message("Credit Reference updated Successfull!!").build();
+			return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+		}else {
+			ResponseBean reponsebean=ResponseBean.builder().data("Error").status("Error").message("Wrong Password!!").build();
+			return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+		}
+		
+	}
+	
+	
+
+	@PostMapping("/depositWithdraw")
+	public ResponseEntity<ResponseBean> depositWithdraw(@RequestBody EncodedPayload payload) {
+	    EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+	    
+	    String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptDepositWithdraw";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+	    DepositWithdraw request = restTemplate.postForObject(decryptUrl, requestEntity, DepositWithdraw.class);
+	    String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+request.getPassword(),String.class);
+	    
+	    List<EXUser> transactions = request.getTransactions();
+	    
+	    if (!parent.getPassword().equals(encryptPassword)) {
+	        ResponseBean responseBean = ResponseBean.builder().data("Deposit/Withdraw").status("error").message("wrong password").build();
+	        return new ResponseEntity<>(responseBean, HttpStatus.OK);
+	    }
+
+	    List<EXUser> updatedUsers = new ArrayList<>();
+	    
+	    for (EXUser transaction : transactions) {
+	        EXUser user = userRepo.findByUserid(transaction.getUserid().toLowerCase());
+	        
+	         if (transaction.getType().equalsIgnoreCase("deposit")) {
+	            if (parent.getMyBalance() >= transaction.getMyBalance()) {
+	                user.setMyBalance(user.getMyBalance() + transaction.getMyBalance());
+	                parent.setMyBalance(parent.getMyBalance() - transaction.getMyBalance());
+	            } else {
+	                ResponseBean responseBean = ResponseBean.builder().data("Deposit/Withdraw").status("error").message("Admin don't have sufficient balance").build();
+	                return new ResponseEntity<>(responseBean, HttpStatus.OK);
+	            }
+	        } else if (transaction.getType().equalsIgnoreCase("withdraw")) {
+	            if (transaction.getMyBalance() <= user.getMyBalance()) {
+	                user.setMyBalance(user.getMyBalance() - transaction.getMyBalance());
+	                parent.setMyBalance(parent.getMyBalance() + transaction.getMyBalance());
+	            } else {
+	                ResponseBean responseBean = ResponseBean.builder().data("Deposit/Withdraw").status("error").message(transaction.getUserid()+ " don't have sufficient balance").build();
+	                return new ResponseEntity<>(responseBean, HttpStatus.OK);
+	            }
+	        }
+	         updatedUsers.add(user);
+	    }
+	    userRepo.saveAll(updatedUsers);
+	    userRepo.save(parent);
+
+	    ResponseBean responseBean = ResponseBean.builder().data("Deposit/Withdraw").status("success").message("Balance updated successfully").build();
+	    return new ResponseEntity<>(responseBean, HttpStatus.OK);
+	}
+
 	
 }

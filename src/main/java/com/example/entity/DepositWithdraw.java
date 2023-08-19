@@ -1,17 +1,17 @@
 package com.example.entity;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
-@Builder
-public class LoginRequest {
+@AllArgsConstructor
+public class DepositWithdraw {
 	
-	private String userid;
 	private String password;
+	private List<EXUser> transactions;
 
 }

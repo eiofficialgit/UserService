@@ -24,7 +24,4 @@ public interface EXUserRepository extends MongoRepository<EXUser, String> {
 
 	Page<EXUser> findByUsertype(Integer usertype, Pageable pageable);
 
-	
-	
-
 }

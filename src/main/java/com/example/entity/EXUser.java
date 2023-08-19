@@ -20,6 +20,8 @@ public class EXUser {
 	private String websitename;
 	 
 	private String email;
+	
+	private String type;
 	 
 	private String firstName;
    
@@ -104,8 +106,6 @@ public class EXUser {
 	
 	 
 	private String websiteId;
-	
-	private String websiteName;
 	
 	private String subChild;
 		
