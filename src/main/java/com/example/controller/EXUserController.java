@@ -1164,6 +1164,7 @@ public class EXUserController {
 	    List<EXUser> transactions = request.getTransactions();
 	    
 	    boolean insufficientParentBalance = false;
+	    boolean insufficientChildBalance = false;
 	    
 	    if (!parent.getPassword().equals(encryptPassword)) {
 	        ResponseBean responseBean = ResponseBean.builder().data("Deposit/Withdraw").status("error").message("wrong password").build();
@@ -1187,8 +1188,7 @@ public class EXUserController {
 	                user.setMyBalance(user.getMyBalance() - transaction.getMyBalance());
 	                parent.setMyBalance(parent.getMyBalance() + transaction.getMyBalance());
 	            } else {
-	                ResponseBean responseBean = ResponseBean.builder().data("Deposit/Withdraw").status("error").message(transaction.getUserid()+ " don't have sufficient balance").build();
-	                return new ResponseEntity<>(responseBean, HttpStatus.OK);
+	            	insufficientChildBalance = true; 
 	            }
 	        }
 	         updatedUsers.add(user);
@@ -1200,14 +1200,16 @@ public class EXUserController {
 	        ResponseBean responseBean = ResponseBean.builder().data("Deposit/Withdraw").status("error").message("Admin don't have sufficient balance").build();
 	        return new ResponseEntity<>(responseBean, HttpStatus.OK);
 	    }
+	    
+	    if (insufficientChildBalance) {
+	        ResponseBean responseBean = ResponseBean.builder().data("Deposit/Withdraw").status("error").message("Child don't have sufficient balance").build();
+	        return new ResponseEntity<>(responseBean, HttpStatus.OK);
+	    }
 
 	    ResponseBean responseBean = ResponseBean.builder().data("Deposit/Withdraw").status("success").message("Balance updated successfully").build();
 	    return new ResponseEntity<>(responseBean, HttpStatus.OK);
 	}
 	
 	
-	
-
-
 	
 }
