@@ -1143,30 +1143,25 @@ public class EXUserController {
 	
 	
 	
-	@PutMapping("/creditReference/{userId}")
-	public ResponseEntity<ResponseBean> creditReference(@RequestBody EXUser user, @PathVariable("userId") String userid) {
+	@PostMapping("/creditReference")
+	public ResponseEntity<ResponseBean> creditReference(@RequestBody EncodedPayload payload) {
+		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+	    EXUser user = restTemplate.postForObject(decryptUrl, requestEntity, EXUser.class);
+	    String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
+	    String userid = user.getUserid();
+		
 		EXUser currentUser = userRepo.findByUserid(userid.toLowerCase());
-		if(user.getPassword().equals(currentUser.getPassword())) {
+		if(parent.getPassword().equals(encryptPassword)) {
 			currentUser.setFixLimit(user.getFixLimit());
-			EXUser save = userRepo.save(currentUser);
-			
-			String encryptUrl = "http://encryptdecrypt-ms/api/encryptPayload";
-			HttpHeaders headers = new HttpHeaders();
-			headers.setContentType(MediaType.APPLICATION_JSON);
-			EncodedPayload encodedPayload=new EncodedPayload();
-			Gson gson = new Gson();
-			String data = gson.toJson(save);
-			JsonObject jsonObject = new JsonParser().parse(data).getAsJsonObject();
-			JSONObject jObj = new JSONObject();
-		    jObj.put("data", jsonObject);
-		    encodedPayload.setPayload(jObj.toString());
-			HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
-			String encryptData = restTemplate.postForObject(encryptUrl, requestEntity, String.class);
-			
-			ResponseBean reponsebean=ResponseBean.builder().data(encryptData).status("success").message("Credit Reference updated Successfull!!").build();
+			userRepo.save(currentUser);
+			ResponseBean reponsebean=ResponseBean.builder().data("CreditReference").status("success").message("Credit Reference updated Successfull!!").build();
 			return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		}else {
-			ResponseBean reponsebean=ResponseBean.builder().data("Error").status("Error").message("Wrong Password!!").build();
+			ResponseBean reponsebean=ResponseBean.builder().data("CreditReference").status("Error").message("Wrong Password!!").build();
 			return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		}
 		
