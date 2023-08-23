@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import com.example.entity.ActivityLog;
 import com.example.entity.DecryptResponse;
 import com.example.entity.DepositWithdraw;
 import com.example.entity.EXUser;
@@ -42,6 +43,7 @@ import com.example.entity.TransactionHistory;
 import com.example.entity.UserStake;
 import com.example.entity.validationModel;
 import com.example.entity.WebsiteBean;
+import com.example.repository.ActivityLogRepo;
 import com.example.repository.Authenticaterepo;
 import com.example.repository.EXUserRepository;
 import com.example.repository.TransactionHistoryRepo;
@@ -77,6 +79,12 @@ public class EXUserController {
 	
 	@Autowired
 	private TransactionHistoryRepo transactionHistoryRepo;
+	
+	@Autowired
+	private HttpServletRequest httpServletRequest;
+	
+	@Autowired
+	private ActivityLogRepo activityLogRepo;
 	
 	
 
@@ -818,6 +826,15 @@ public class EXUserController {
 			ResponseBean reponsebean=ResponseBean.builder().data("ManagementHome").status("Error").message("Wrong password!!!").build();
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.UNAUTHORIZED);
 		}
+		
+		ActivityLog log = new ActivityLog();
+		SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm");
+	    Date date = new Date();
+	    
+	    log.setDate_time(sdf.format(date));
+	    log.setIpAddress(httpServletRequest.getRemoteAddr());
+	    log.setLoginStatus("Login--");
+	    activityLogRepo.save(log);
 		
 		httpSession.setAttribute("EXUser", users);
 		String  encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
