@@ -1,7 +1,9 @@
 package com.example.controller;
 
 
-import java.util.ArrayList; 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -36,11 +38,13 @@ import com.example.entity.EXUserResponse;
 import com.example.entity.EncodedPayload;
 import com.example.entity.Partnership;
 import com.example.entity.ResponseBean;
+import com.example.entity.TransactionHistory;
 import com.example.entity.UserStake;
 import com.example.entity.validationModel;
 import com.example.entity.WebsiteBean;
 import com.example.repository.Authenticaterepo;
 import com.example.repository.EXUserRepository;
+import com.example.repository.TransactionHistoryRepo;
 import com.example.repository.WebsiteBeanRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
@@ -70,6 +74,9 @@ public class EXUserController {
 
 	@Autowired
 	private RestTemplate restTemplate;
+	
+	@Autowired
+	private TransactionHistoryRepo transactionHistoryRepo;
 	
 	
 
@@ -1166,6 +1173,10 @@ public class EXUserController {
 	    boolean insufficientParentBalance = false;
 	    boolean insufficientChildBalance = false;
 	    
+	    TransactionHistory history = new TransactionHistory();
+	    SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm");
+	    Date date = new Date();
+	    
 	    if (!parent.getPassword().equals(encryptPassword)) {
 	        ResponseBean responseBean = ResponseBean.builder().data("Deposit/Withdraw").status("error").message("wrong password").build();
 	        return new ResponseEntity<>(responseBean, HttpStatus.OK);
@@ -1180,6 +1191,13 @@ public class EXUserController {
 	            if (parent.getMyBalance() >= transaction.getMyBalance()) {
 	                user.setMyBalance(user.getMyBalance() + transaction.getMyBalance());
 	                parent.setMyBalance(parent.getMyBalance() - transaction.getMyBalance());
+	                history.setDepositFromUpline(transaction.getMyBalance());
+	                history.setWithdrawByUpline(0.0);	               
+	                history.setBalance(user.getMyBalance());
+	                history.setFrom(parent.getUserid());
+	                history.setTo(user.getUserid());
+	                history.setDate_time(sdf.format(date));
+	                transactionHistoryRepo.save(history);
 	            } else {
 	            	insufficientParentBalance = true;
 	            }
@@ -1187,6 +1205,13 @@ public class EXUserController {
 	            if (transaction.getMyBalance() <= user.getMyBalance()) {
 	                user.setMyBalance(user.getMyBalance() - transaction.getMyBalance());
 	                parent.setMyBalance(parent.getMyBalance() + transaction.getMyBalance());
+	                history.setDepositFromUpline(0.0);
+	                history.setWithdrawByUpline(transaction.getMyBalance());
+	                history.setBalance(user.getMyBalance());
+	                history.setFrom(parent.getUserid());
+	                history.setTo(user.getUserid());
+	                history.setDate_time(sdf.format(date));
+	                transactionHistoryRepo.save(history);
 	            } else {
 	            	insufficientChildBalance = true; 
 	            }
