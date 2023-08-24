@@ -828,7 +828,7 @@ public class EXUserController {
 		}
 		
 		ActivityLog log = new ActivityLog();
-		SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm");
+		SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 	    Date date = new Date();
 	    
 	    log.setDate_time(sdf.format(date));
@@ -1155,6 +1155,10 @@ public class EXUserController {
 	    String userid = user.getUserid();
 		
 		EXUser currentUser = userRepo.findByUserid(userid.toLowerCase());
+		if(user.getFixLimit()==null) {
+			ResponseBean reponsebean=ResponseBean.builder().data("CreditReference").status("error").message("Please enter Credit Reference").build();
+			return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+		}
 		if(parent.getPassword().equals(encryptPassword)) {
 			currentUser.setFixLimit(user.getFixLimit());
 			userRepo.save(currentUser);
@@ -1186,7 +1190,7 @@ public class EXUserController {
 	    boolean insufficientChildBalance = false;
 	    
 	    TransactionHistory history = new TransactionHistory();
-	    SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm");
+	    SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 	    Date date = new Date();
 	    
 	    if (!parent.getPassword().equals(encryptPassword)) {
@@ -1247,6 +1251,45 @@ public class EXUserController {
 	    return new ResponseEntity<>(responseBean, HttpStatus.OK);
 	}
 	
+	
+	@GetMapping("/transactionHistory")
+	public ResponseEntity<ResponseBean> transactionHistoryList( ){
+		List<TransactionHistory> findAll = transactionHistoryRepo.findAll();
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    EncodedPayload encodedPayload=new EncodedPayload();
+	    Gson gson = new Gson();
+		String data = gson.toJson(findAll);
+		JsonArray jsonArray = new JsonParser().parse(data).getAsJsonArray();
+		JSONObject jObj = new JSONObject();
+		jObj.put("data", jsonArray);
+	    encodedPayload.setPayload(jObj.toString());
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
+	    String encryptwebsiteData = restTemplate.postForObject(decryptUrl, requestEntity, String.class);
+	    ResponseBean reponsebean=ResponseBean.builder().data(encryptwebsiteData).status("success").message("All TransactionHistory fetch Successfull!!").build();
+		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+	}
+	
+	
+	@GetMapping("/activityLog")
+	public ResponseEntity<ResponseBean> activityLogList( ){
+		List<ActivityLog> findAll = activityLogRepo.findAll();
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    EncodedPayload encodedPayload=new EncodedPayload();
+	    Gson gson = new Gson();
+		String data = gson.toJson(findAll);
+		JsonArray jsonArray = new JsonParser().parse(data).getAsJsonArray();
+		JSONObject jObj = new JSONObject();
+		jObj.put("data", jsonArray);
+	    encodedPayload.setPayload(jObj.toString());
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
+	    String encryptwebsiteData = restTemplate.postForObject(decryptUrl, requestEntity, String.class);
+	    ResponseBean reponsebean=ResponseBean.builder().data(encryptwebsiteData).status("success").message("All TransactionHistory fetch Successfull!!").build();
+		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+	}
 	
 	
 }
