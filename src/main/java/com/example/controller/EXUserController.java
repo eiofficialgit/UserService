@@ -1124,7 +1124,7 @@ public class EXUserController {
 	}
 
 	
-	@GetMapping("/child/{parentId}/{usertype}")
+	@GetMapping("/{parentId}/{usertype}")
 	public ResponseEntity<List<EXUser>> listOnHierarchy(@PathVariable String parentId, @PathVariable Integer usertype){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		if(parent.getUsertype()<usertype) {
