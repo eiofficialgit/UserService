@@ -1125,13 +1125,36 @@ public class EXUserController {
 
 	
 	@GetMapping("/{parentId}/{usertype}")
-	public ResponseEntity<List<EXUser>> listOnHierarchy(@PathVariable String parentId, @PathVariable Integer usertype){
+	public ResponseEntity<ResponseBean> listOnHierarchy(@PathVariable String parentId, @PathVariable Integer usertype, @RequestParam("pageNumber") int pageNumber,@RequestParam("pageSize") int pageSize){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		if(parent.getUsertype()<usertype) {
-		List<EXUser> findByUsertype = userRepo.findByParentIdAndUsertype(parentId, usertype);
-		return ResponseEntity.ok(findByUsertype);
+			Pageable pageable = PageRequest.of(pageNumber, pageSize);
+			Page<EXUser> findByUsertype = userRepo.findByParentIdAndUsertype(parentId, usertype, pageable);
+		    EXUserResponse response = new EXUserResponse();
+		    List<EXUser> content = findByUsertype.getContent();
+		    response.setContent(content);
+		    response.setPageNumber(findByUsertype.getNumber());
+		    response.setPageSize(findByUsertype.getSize());
+		    response.setTotalElements(findByUsertype.getTotalElements());
+		    response.setTotalPages(findByUsertype.getTotalPages());
+		    response.setLastPage(findByUsertype.isLast());
+		    String encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+		    HttpHeaders headers = new HttpHeaders();
+		    headers.setContentType(MediaType.APPLICATION_JSON);
+		    Gson gson = new Gson();
+		    String data = gson.toJson(response);
+		    EncodedPayload encodedPayload = new EncodedPayload();
+		    encodedPayload.setPayload(data);
+		    JsonObject jsonObject = new JsonParser().parse(data).getAsJsonObject();
+			JSONObject jObj = new JSONObject();	
+		    jObj.put("data", jsonObject);
+		    response.setPayload(jObj.toString());
+		    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
+		    String encryptData = restTemplate.postForObject(encryptUrl, requestEntity, String.class);
+		    ResponseBean responseBean = ResponseBean.builder().data(encryptData).status("success").message("All Childs fetch Successful!!").build();
+		    return new ResponseEntity<>(responseBean, HttpStatus.OK);
 		}else {
-			return null ;
+		return null;
 		}
 	}
 	

@@ -20,8 +20,10 @@ public interface EXUserRepository extends MongoRepository<EXUser, String> {
 
 	List<EXUser> findByUsertype(int usertype);
 	
-	List<EXUser> findByParentIdAndUsertype(String parentId, Integer usertype);
+	Page<EXUser> findByParentIdAndUsertype(String parentId, Integer usertype, Pageable pageable);
 
 	Page<EXUser> findByUsertype(Integer usertype, Pageable pageable);
+
+	Page<EXUser> findByUsertype(String parentId, Integer usertype, Pageable pageable);
 
 }
