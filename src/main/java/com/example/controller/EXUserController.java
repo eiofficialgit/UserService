@@ -1154,7 +1154,8 @@ public class EXUserController {
 		    ResponseBean responseBean = ResponseBean.builder().data(encryptData).status("success").message("All Childs fetch Successful!!").build();
 		    return new ResponseEntity<>(responseBean, HttpStatus.OK);
 		}else {
-		return null;
+			ResponseBean responseBean = ResponseBean.builder().data("Downline List").status("Error").message("Something went wrong!!").build();
+		    return new ResponseEntity<>(responseBean, HttpStatus.OK);
 		}
 	}
 	
