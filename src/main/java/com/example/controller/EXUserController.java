@@ -1277,8 +1277,8 @@ public class EXUserController {
 	    jsonObjects.add("data", jObjs);
 	    encodedPayload.setPayload(jsonObjects.toString());
 	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
-	    String encryptwebsiteData = restTemplate.postForObject(decryptUrl, requestEntity, String.class);
-	    ResponseBean reponsebean=ResponseBean.builder().data(encryptwebsiteData).status("success").message("All TransactionHistory Details fetch Successfull!!").build();
+	    String encryptData = restTemplate.postForObject(decryptUrl, requestEntity, String.class);
+	    ResponseBean reponsebean=ResponseBean.builder().data(encryptData).status("success").message("All TransactionHistory Details fetch Successfull!!").build();
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	}
 	
