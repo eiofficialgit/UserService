@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import com.example.entity.ActivityLog;
+import com.example.entity.ChangePassword;
 import com.example.entity.DecryptResponse;
 import com.example.entity.DepositWithdraw;
 import com.example.entity.EXUser;
@@ -1121,7 +1122,7 @@ public class EXUserController {
 	}
 
 	
-	@GetMapping("/{parentId}/{usertype}")
+	@GetMapping("/child/{parentId}/{usertype}")
 	public ResponseEntity<List<EXUser>> listOnHierarchy(@PathVariable String parentId, @PathVariable Integer usertype){
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		if(parent.getUsertype()<usertype) {
@@ -1289,6 +1290,37 @@ public class EXUserController {
 	    String encryptwebsiteData = restTemplate.postForObject(decryptUrl, requestEntity, String.class);
 	    ResponseBean reponsebean=ResponseBean.builder().data(encryptwebsiteData).status("success").message("All TransactionHistory fetch Successfull!!").build();
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+	}
+	
+	
+	@PostMapping("/changeCurrentPassword")
+	public ResponseEntity<ResponseBean> changeCurrentPassword(@RequestBody EncodedPayload payload ){
+		
+		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+	    EXUser decryptData = restTemplate.postForObject(decryptUrl, requestEntity, EXUser.class);
+	    String newPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptData.getPassword(),String.class);
+	   
+	    if(!parent.getPassword().equals(newPassword)) {
+	    	ResponseBean reponsebean=ResponseBean.builder().data("Password Updation").status("Error").message("Invalid old Password!!").build();
+	    	return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+	    }
+	    
+	    if(p.matcher(decryptData.getNewPassword()).matches()== false) {
+	    	ResponseBean reponsebean=ResponseBean.builder().data("Password Updation").status("Error").message("Password Must contains 1 Upper Case, 1 Lower Case & 1 Numeric Value & in Between 8-15 Charachter").build();
+			return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+	    }else {
+	    	parent.setPassword(decryptData.getNewPassword());
+	    	String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+parent.getPassword(),String.class);
+	    	parent.setPassword(encryptPassword);
+	    	userRepo.save(parent);
+	    	ResponseBean reponsebean=ResponseBean.builder().data("Password Updation").status("success").message("Password updated Successfull!!").build();
+	    	return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+	    }
+	    
 	}
 	
 	

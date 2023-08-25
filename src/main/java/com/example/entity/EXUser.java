@@ -30,6 +30,8 @@ public class EXUser {
 	private String userid;
  
 	private String password;
+	
+	private String newPassword;
 	 
 	private  Integer usertype;
 
