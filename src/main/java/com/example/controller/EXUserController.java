@@ -1026,6 +1026,8 @@ public class EXUserController {
 		// }
 		// }
 	
+	
+	
 	@PostMapping("/checkuser")
 	public ResponseEntity<ResponseBean> checkuser(@RequestBody EncodedPayload payload) {
 		
@@ -1043,7 +1045,9 @@ public class EXUserController {
 			ResponseBean reponsebean=ResponseBean.builder().data("CheckUser").status("success").message("Valid User").build();
 			return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		}
-	}	
+	}
+	
+	
 	
 	@PostMapping("/addWebsite")
 	public ResponseEntity<ResponseBean> saveWebsite(@RequestBody WebsiteBean website) {
@@ -1056,6 +1060,8 @@ public class EXUserController {
 		}
 		return ResponseEntity.ok(new ResponseBean("Success", "Website Created Successfully!!", "WebSiteBean"));
 	}
+	
+	
 
 	@GetMapping("/allWebsite")
 	public ResponseEntity<ResponseBean> listOfWebsite() {
@@ -1076,57 +1082,7 @@ public class EXUserController {
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	}
 	
-	@GetMapping("/allchild")
-	public ResponseEntity<ResponseBean> listUserType( ){
-		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
-		Integer usertype = parent.getUsertype()+1;
-		List<EXUser> findByUsertype = userRepo.findByUsertype(usertype);
-		String encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
-		EncodedPayload encodedPayload=new EncodedPayload();
-		Gson gson = new Gson();
-		String data = gson.toJson(findByUsertype);
-		JsonArray jsonArray = new JsonParser().parse(data).getAsJsonArray();
-		JSONObject jObj = new JSONObject();
-		jObj.put("data", jsonArray);
-	    encodedPayload.setPayload(jObj.toString());
-		HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
-		String encryptData = restTemplate.postForObject(encryptUrl, requestEntity, String.class);
-		ResponseBean reponsebean=ResponseBean.builder().data(encryptData).status("success").message("All Childs fetch Successfull!!").build();
-		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
-	}
-
-	@GetMapping("/allchildwithpagination")
-	public ResponseEntity<ResponseBean> listUserTypeWithPagination(@RequestParam("pageNumber") int pageNumber,@RequestParam("pageSize") int pageSize) {
-	    EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
-	    Integer usertype = parent.getUsertype() + 1;
-	    Pageable pageable = PageRequest.of(pageNumber, pageSize);
-	    Page<EXUser> findByUsertype = userRepo.findByUsertype(usertype, pageable);
-	    EXUserResponse response = new EXUserResponse();
-	    List<EXUser> content = findByUsertype.getContent();
-	    response.setContent(content);
-	    response.setPageNumber(findByUsertype.getNumber());
-	    response.setPageSize(findByUsertype.getSize());
-	    response.setTotalElements(findByUsertype.getTotalElements());
-	    response.setTotalPages(findByUsertype.getTotalPages());
-	    response.setLastPage(findByUsertype.isLast());
-	    String encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
-	    HttpHeaders headers = new HttpHeaders();
-	    headers.setContentType(MediaType.APPLICATION_JSON);
-	    Gson gson = new Gson();
-	    String data = gson.toJson(response);
-	    EncodedPayload encodedPayload = new EncodedPayload();
-	    encodedPayload.setPayload(data);
-	    JsonObject jsonObject = new JsonParser().parse(data).getAsJsonObject();
-		JSONObject jObj = new JSONObject();	
-	    jObj.put("data", jsonObject);
-	    response.setPayload(jObj.toString());
-	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
-	    String encryptData = restTemplate.postForObject(encryptUrl, requestEntity, String.class);
-	    ResponseBean responseBean = ResponseBean.builder().data(encryptData).status("success").message("All Childs fetch Successful!!").build();
-	    return new ResponseEntity<>(responseBean, HttpStatus.OK);
-	}
+	
 
 	
 	@GetMapping("/{parentId}/{usertype}")
@@ -1163,6 +1119,7 @@ public class EXUserController {
 		    return new ResponseEntity<>(responseBean, HttpStatus.OK);
 		}
 	}
+	
 	
 	@GetMapping("/logout")
 	public ResponseEntity<ResponseBean> logout(HttpServletRequest request){
