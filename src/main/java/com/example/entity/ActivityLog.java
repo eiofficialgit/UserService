@@ -1,5 +1,7 @@
 package com.example.entity;
 
+import org.springframework.data.annotation.Id;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,6 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ActivityLog {
 	
+	private String userid;
 	private String date_time;
 	private String loginStatus;
 	private String ipAddress;

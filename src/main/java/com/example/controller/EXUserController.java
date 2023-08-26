@@ -349,6 +349,7 @@ public class EXUserController {
 			child.setMobileNumber(user.getMobileNumber());
 			child.setIspasswordChanged(false);
 			child.setChildLiab(0.0);
+			child.setFirstName(user.getFirstName());
 			child.setLastName(user.getLastName());
 			child.setTimeZone(user.getTimeZone());
 			child.setEmail(user.getEmail());
@@ -428,6 +429,7 @@ public class EXUserController {
 			child.setSubChild("0");
 			child.setMobileNumber(user.getMobileNumber());
 			child.setIspasswordChanged(false);
+			child.setFirstName(user.getFirstName());
 			child.setLastName(user.getLastName());
 			child.setTimeZone(user.getTimeZone());
 			child.setEmail(user.getEmail());
@@ -505,6 +507,7 @@ public class EXUserController {
 			child.setSubChild("0");
 			child.setMobileNumber(user.getMobileNumber());
 			child.setIspasswordChanged(false);
+			child.setFirstName(user.getFirstName());
 			child.setLastName(user.getLastName());
 			child.setTimeZone(user.getTimeZone());
 			child.setEmail(user.getEmail());
@@ -584,6 +587,7 @@ public class EXUserController {
 			child.setSubChild("0");
 			child.setMobileNumber(user.getMobileNumber());
 			child.setIspasswordChanged(false);
+			child.setFirstName(user.getFirstName());
 			child.setLastName(user.getLastName());
 			child.setTimeZone(user.getTimeZone());
 			child.setEmail(user.getEmail());
@@ -663,6 +667,7 @@ public class EXUserController {
 			child.setSubChild("0");
 			child.setMobileNumber(user.getMobileNumber());
 			child.setIspasswordChanged(false);
+			child.setFirstName(user.getFirstName());
 			child.setLastName(user.getLastName());
 			child.setTimeZone(user.getTimeZone());
 			child.setEmail(user.getEmail());
@@ -741,6 +746,7 @@ public class EXUserController {
 			child.setSubChild("0");
 			child.setMobileNumber(user.getMobileNumber());
 			child.setIspasswordChanged(false);
+			child.setFirstName(user.getFirstName());
 			child.setLastName(user.getLastName());
 			child.setTimeZone(user.getTimeZone());
 			child.setEmail(user.getEmail());
@@ -807,8 +813,6 @@ public class EXUserController {
 	
 	@PostMapping("/managementHome")
 	public ResponseEntity<ResponseBean> managementHome(@RequestBody EncodedPayload payload) {
-		/*String payloads=payload.getPayload();
-		EXUser decryptUserData = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decryptPayload",EXUser.class);*/
 		
 		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
 		HttpHeaders headers = new HttpHeaders();
@@ -830,16 +834,17 @@ public class EXUserController {
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.UNAUTHORIZED);
 		}
 		
+		httpSession.setAttribute("EXUser", users);
+		
 		ActivityLog log = new ActivityLog();
 		SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 	    Date date = new Date();
-	    
+	    log.setUserid(users.getId());
 	    log.setDate_time(sdf.format(date));
 	    log.setIpAddress(httpServletRequest.getRemoteAddr());
 	    log.setLoginStatus("Login--");
 	    activityLogRepo.save(log);
 		
-		httpSession.setAttribute("EXUser", users);
 		String  encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
 		HttpEntity<EXUser> userRequestEntity = new HttpEntity<>(users, headers);
 		String encryptUserData = restTemplate.postForObject(encryptUrl, userRequestEntity, String.class);
@@ -1280,8 +1285,10 @@ public class EXUserController {
 	
 	@GetMapping("/transactionHistory")
 	public ResponseEntity<ResponseBean> transactionHistoryList(@RequestParam("pageNumber") int pageNumber, @RequestParam("pageSize") int pageSize ){
+		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		String userid = parent.getUserid();
 		Pageable pageable = PageRequest.of(pageNumber, pageSize);
-	    Page<TransactionHistory> transactionHistoryList = transactionHistoryRepo.findAll(pageable);
+	    Page<TransactionHistory> transactionHistoryList = transactionHistoryRepo.findByfrom(userid, pageable);
 	    TransactionHistoryResponse transactionhistoryresponse = new TransactionHistoryResponse();
 	    List<TransactionHistory> contents = transactionHistoryList.getContent();
 	    transactionhistoryresponse.setContent(contents);
@@ -1308,8 +1315,10 @@ public class EXUserController {
 	
 	@GetMapping("/activityLog")
 	public ResponseEntity<ResponseBean> activityLogList(@RequestParam("pageNumber") int pageNumber, @RequestParam("pageSize") int pageSize) {
+		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		String userid = parent.getId();
 		Pageable pageable = PageRequest.of(pageNumber, pageSize);
-	    Page<ActivityLog> activityList = activityLogRepo.findAll(pageable);
+	    Page<ActivityLog> activityList = activityLogRepo.findByuserid(userid, pageable);
 	    ActivityLogResponse activitylogresponse = new ActivityLogResponse();
 	    List<ActivityLog> contents = activityList.getContent();
 	    activitylogresponse.setContent(contents);
