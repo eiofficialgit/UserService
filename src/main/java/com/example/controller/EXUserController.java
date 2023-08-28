@@ -1120,8 +1120,8 @@ public class EXUserController {
 		}
 	}
 	
-	@GetMapping("/search/{keywords}")
-	public ResponseEntity<ResponseBean> list(@PathVariable String keywords, @RequestParam("pageNumber") int pageNumber,@RequestParam("pageSize") int pageSize){
+	@GetMapping("/search")
+	public ResponseEntity<ResponseBean> list(@RequestParam("pageNumber") int pageNumber,@RequestParam("pageSize") int pageSize, @RequestParam("keywords") String keywords ){
 			
 			Pageable pageable = PageRequest.of(pageNumber, pageSize);
 			Page<EXUser> findByUserid = userRepo.findByuseridContainingIgnoreCase(keywords, pageable);
