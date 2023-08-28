@@ -1121,22 +1121,33 @@ public class EXUserController {
 	}
 	
 	@GetMapping("/search/{keywords}")
-	public ResponseEntity<ResponseBean> list(@PathVariable String keywords){
-			List<EXUser> search = userRepo.findByuseridContainingIgnoreCase(keywords);
-			String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
-			HttpHeaders headers = new HttpHeaders();
+	public ResponseEntity<ResponseBean> list(@PathVariable String keywords, @RequestParam("pageNumber") int pageNumber,@RequestParam("pageSize") int pageSize){
+			
+			Pageable pageable = PageRequest.of(pageNumber, pageSize);
+			Page<EXUser> findByUserid = userRepo.findByuseridContainingIgnoreCase(keywords, pageable);
+		    EXUserResponse response = new EXUserResponse();
+		    List<EXUser> content = findByUserid.getContent();
+		    response.setContent(content);
+		    response.setPageNumber(findByUserid.getNumber());
+		    response.setPageSize(findByUserid.getSize());
+		    response.setTotalElements(findByUserid.getTotalElements());
+		    response.setTotalPages(findByUserid.getTotalPages());
+		    response.setLastPage(findByUserid.isLast());
+		    String encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+		    HttpHeaders headers = new HttpHeaders();
 		    headers.setContentType(MediaType.APPLICATION_JSON);
-		    EncodedPayload encodedPayload=new EncodedPayload();
 		    Gson gson = new Gson();
-			String data = gson.toJson(search);
-			JsonArray jsonArray = new JsonParser().parse(data).getAsJsonArray();
-			JSONObject jObj = new JSONObject();
-			jObj.put("data", jsonArray);
-		    encodedPayload.setPayload(jObj.toString());
+		    String data = gson.toJson(response);
+		    EncodedPayload encodedPayload = new EncodedPayload();
+		    encodedPayload.setPayload(data);
+		    JsonObject jsonObject = new JsonParser().parse(data).getAsJsonObject();
+			JSONObject jObj = new JSONObject();	
+		    jObj.put("data", jsonObject);
+		    response.setPayload(jObj.toString());
 		    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
-		    String encryptData = restTemplate.postForObject(decryptUrl, requestEntity, String.class);
-		    ResponseBean reponsebean=ResponseBean.builder().data(encryptData).status("success").message("All child fetch Successfull!!").build();
-			return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+		    String encryptData = restTemplate.postForObject(encryptUrl, requestEntity, String.class);
+		    ResponseBean responseBean = ResponseBean.builder().data(encryptData).status("success").message("All Childs fetch Successful!!").build();
+		    return new ResponseEntity<>(responseBean, HttpStatus.OK);
 	}
 		
 	

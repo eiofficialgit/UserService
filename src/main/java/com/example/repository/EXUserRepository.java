@@ -31,6 +31,6 @@ public interface EXUserRepository extends MongoRepository<EXUser, String> {
 
 	List<EXUser> findByParentIdAndUsertype(String parentId, Integer usertype);
 
-	List<EXUser> findByuseridContainingIgnoreCase(String keywords);
+	Page<EXUser> findByuseridContainingIgnoreCase(String keywords, Pageable pageable);
 
 }
