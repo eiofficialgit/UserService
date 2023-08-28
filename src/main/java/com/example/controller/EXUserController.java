@@ -1120,6 +1120,54 @@ public class EXUserController {
 		}
 	}
 	
+	@GetMapping("/search/{keywords}")
+	public ResponseEntity<ResponseBean> list(@PathVariable String keywords){
+			List<EXUser> search = userRepo.findByuseridContaining(keywords);
+			String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+			HttpHeaders headers = new HttpHeaders();
+		    headers.setContentType(MediaType.APPLICATION_JSON);
+		    EncodedPayload encodedPayload=new EncodedPayload();
+		    Gson gson = new Gson();
+			String data = gson.toJson(search);
+			JsonArray jsonArray = new JsonParser().parse(data).getAsJsonArray();
+			JSONObject jObj = new JSONObject();
+			jObj.put("data", jsonArray);
+		    encodedPayload.setPayload(jObj.toString());
+		    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
+		    String encryptData = restTemplate.postForObject(decryptUrl, requestEntity, String.class);
+		    ResponseBean reponsebean=ResponseBean.builder().data(encryptData).status("success").message("All child fetch Successfull!!").build();
+			return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+	}
+	
+	
+	
+	@GetMapping("/allchild//{parentId}/{usertype}")
+	public ResponseEntity<ResponseBean> listUserType(@PathVariable String parentId, @PathVariable Integer usertype ){
+		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		if(parent.getUsertype()<usertype) {
+	    List<EXUser> findByParentIdAndUsertype = userRepo.findByParentIdAndUsertype(parentId, usertype);
+		    
+		String encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		EncodedPayload encodedPayload=new EncodedPayload();
+		Gson gson = new Gson();
+		String data = gson.toJson(findByParentIdAndUsertype);
+		JsonArray jsonArray = new JsonParser().parse(data).getAsJsonArray();
+		JSONObject jObj = new JSONObject();
+		jObj.put("data", jsonArray);
+	    encodedPayload.setPayload(jObj.toString());
+		HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
+		String encryptData = restTemplate.postForObject(encryptUrl, requestEntity, String.class);
+		ResponseBean reponsebean=ResponseBean.builder().data(encryptData).status("success").message("All Childs fetch Successfull!!").build();
+		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+	}else {
+		ResponseBean responseBean = ResponseBean.builder().data("Downline List").status("Error").message("Something went wrong!!").build();
+	    return new ResponseEntity<>(responseBean, HttpStatus.OK);
+	}
+	}
+		
+	
 	
 	@GetMapping("/logout")
 	public ResponseEntity<ResponseBean> logout(HttpServletRequest request){
@@ -1327,6 +1375,23 @@ public class EXUserController {
 	    	return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	    }
 	    
+	}
+	
+	
+	@GetMapping("/loginUser")
+	public ResponseEntity<ResponseBean> loginUser() {
+		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		EXUser user = authenticaterepo.findByUserid(parent.getUserid());
+		
+		String  encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+		HttpEntity<EXUser> userRequestEntity = new HttpEntity<>(user, headers);
+		String encryptUserData = restTemplate.postForObject(encryptUrl, userRequestEntity, String.class);
+
+		ResponseBean reponsebean=ResponseBean.builder().data(encryptUserData).status("success").message("User login Successfull!!").build();
+		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+		
 	}
 	
 	

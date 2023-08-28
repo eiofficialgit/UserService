@@ -7,6 +7,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import com.example.entity.EXUser;
 import com.example.entity.EXUserResponse;
 
@@ -25,5 +28,9 @@ public interface EXUserRepository extends MongoRepository<EXUser, String> {
 	Page<EXUser> findByUsertype(Integer usertype, Pageable pageable);
 
 	Page<EXUser> findByUsertype(String parentId, Integer usertype, Pageable pageable);
+
+	List<EXUser> findByParentIdAndUsertype(String parentId, Integer usertype);
+
+	List<EXUser> findByuseridContaining(String keywords);
 
 }
