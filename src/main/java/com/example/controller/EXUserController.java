@@ -8,10 +8,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpEntity;
@@ -1120,20 +1122,35 @@ public class EXUserController {
 		}
 	}
 	
-	@GetMapping("/search")
-	public ResponseEntity<ResponseBean> list(@RequestParam("pageNumber") int pageNumber,@RequestParam("pageSize") int pageSize, @RequestParam("keywords") String keywords ){
-			
-			Pageable pageable = PageRequest.of(pageNumber, pageSize);
-			Page<EXUser> findByUserid = userRepo.findByuseridContainingIgnoreCase(keywords, pageable);
-		    EXUserResponse response = new EXUserResponse();
-		    List<EXUser> content = findByUserid.getContent();
-		    response.setContent(content);
-		    response.setPageNumber(findByUserid.getNumber());
-		    response.setPageSize(findByUserid.getSize());
-		    response.setTotalElements(findByUserid.getTotalElements());
-		    response.setTotalPages(findByUserid.getTotalPages());
-		    response.setLastPage(findByUserid.isLast());
-		    String encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+	
+	@GetMapping("/search/{parentId}/{usertype}")
+	public ResponseEntity<ResponseBean> searchWithPagination(@PathVariable String parentId, @PathVariable Integer usertype, @RequestParam("pageNumber") int pageNumber, @RequestParam("pageSize") int pageSize, @RequestParam("userid") String userid ) {
+
+	    EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+
+	    if (parent.getUsertype() < usertype) {
+	        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+
+	        List<EXUser> findByUsertype = userRepo.findByParentIdAndUsertype(parentId, usertype);
+
+	        if (userid != null && !userid.isEmpty()) {
+	            findByUsertype = findByUsertype.stream()
+	                    .filter(user -> user.getUserid().contains(userid))
+	                    .collect(Collectors.toList());
+	        }
+
+	        Page<EXUser> paginatedUsers = getPage(findByUsertype, pageable);
+
+	        EXUserResponse response = new EXUserResponse();
+	        List<EXUser> content = paginatedUsers.getContent();
+	        response.setContent(content);
+	        response.setPageNumber(paginatedUsers.getNumber());
+	        response.setPageSize(paginatedUsers.getSize());
+	        response.setTotalElements(paginatedUsers.getTotalElements());
+	        response.setTotalPages(paginatedUsers.getTotalPages());
+	        response.setLastPage(paginatedUsers.isLast());
+
+	        String encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
 		    HttpHeaders headers = new HttpHeaders();
 		    headers.setContentType(MediaType.APPLICATION_JSON);
 		    Gson gson = new Gson();
@@ -1146,10 +1163,24 @@ public class EXUserController {
 		    response.setPayload(jObj.toString());
 		    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
 		    String encryptData = restTemplate.postForObject(encryptUrl, requestEntity, String.class);
-		    ResponseBean responseBean = ResponseBean.builder().data(encryptData).status("success").message("All Childs fetch Successful!!").build();
-		    return new ResponseEntity<>(responseBean, HttpStatus.OK);
+
+	        ResponseBean responseBean = ResponseBean.builder().data(encryptData).status("success").message("Filtered Users fetch Successful!!").build();
+
+	        return new ResponseEntity<>(responseBean, HttpStatus.OK);
+	    } else {
+	        ResponseBean responseBean = ResponseBean.builder().data("Downline List").status("Error").message("Something went wrong!!").build();
+	        return new ResponseEntity<>(responseBean, HttpStatus.OK);
+	    }
 	}
-		
+
+	private Page<EXUser> getPage(List<EXUser> content, Pageable pageable) {
+	    int start = (int) pageable.getOffset();
+	    int end = Math.min((start + pageable.getPageSize()), content.size());
+
+	    return new PageImpl<>(content.subList(start, end), pageable, content.size());
+	}
+
+	
 	
 	
 	@GetMapping("/logout")
