@@ -10,4 +10,6 @@ public interface WebsiteBeanRepository extends MongoRepository<WebsiteBean, Stri
 
 	Object findByName(String name);
 
+	WebsiteBean findByname(String websiteName);
+
 }

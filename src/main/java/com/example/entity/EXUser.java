@@ -17,7 +17,7 @@ public class EXUser {
 	@Id
 	private String id;
 
-	private String websitename;
+	private String userName;
 	 
 	private String email;
 	
@@ -108,6 +108,8 @@ public class EXUser {
 	
 	 
 	private String websiteId;
+	
+	private String websiteName;
 	
 	private String subChild;
 		

@@ -109,8 +109,11 @@ public class EXUserController {
 				response.put("type", "error");
 				response.put("message", "Invalid User Data");
 				return CompletableFuture.completedFuture(response);
-			}
-			if (childData.getWebsitename().equalsIgnoreCase("") || childData.getWebsitename().length() < 1) {
+			}if (childData.getUserName().equalsIgnoreCase("") || childData.getUserName().length() < 1) {
+				response.put("type", "error");
+				response.put("message", "username Must be Required");
+				return CompletableFuture.completedFuture(response);
+			} else if (childData.getWebsiteName().equalsIgnoreCase("") || childData.getWebsiteName().length() < 1) {
 				response.put("type", "error");
 				response.put("message", "WebsiteName Must be Required");
 				return CompletableFuture.completedFuture(response);
@@ -138,14 +141,6 @@ public class EXUserController {
 					response.put("type", "error");
 					response.put("message", "Mobile Number Must Be Of 10 Digit");
 					return CompletableFuture.completedFuture(response);
-//			} else if (childData.getExposureLimit() == null) {
-//				response.put("type", "error");
-//				response.put("message", "Invalid Exposure Limit");
-//				return CompletableFuture.completedFuture(response);
-//				}else if(parent.getc.equalsIgnoreCase(null) || userData.getString("userComm").equalsIgnoreCase("")){
-//					response.put("type","error");
-//					response.put("message","Invalid Commission");
-//					return CompletableFuture.completedFuture(response);
 			} else if (childData.getTimeZone().equalsIgnoreCase(null) || childData.getTimeZone().equalsIgnoreCase("")) {
 				response.put("type", "error");
 				response.put("message", "Invalid TimeZone");
@@ -187,8 +182,6 @@ public class EXUserController {
 	}
 	
 
-//		 @ResponseBody
-//		 @RequestMapping(value = "/validateUserCreation",method = RequestMethod.POST)
 	@PostMapping("/validateUserCreation")
 	public ResponseEntity<Object> validateUserCreation(@RequestBody EncodedPayload payload) {			
 		EXUser parentData = (EXUser) httpSession.getAttribute("EXUser");	
@@ -219,26 +212,23 @@ public class EXUserController {
 				return new ResponseEntity<Object>(responseBean, HttpStatus.ACCEPTED);
 			}
 			if (((EXUser) parentData).getUsertype() == 0) {
-//							WebsiteBean webbean = new WebsiteBean();
-//							WebsiteBean web = webRepo.findByid(webbean.getId());
-//							if(web == null){
-//								responseBean.setType("error");
-//								responseBean.setMessage("Please Select a Valid Website");
-//								responseBean.setTitle("Error");
-//								return new ResponseEntity<Object>(responseBean,HttpStatus.ACCEPTED);
-//							}
+							WebsiteBean web = webRepo.findByname(childData.getWebsiteName());
+							if(web == null){
+								responseBean.setData("error");
+								responseBean.setMessage("Please Select a Valid Website");
+								responseBean.setStatus("Error");
+								return new ResponseEntity<Object>(responseBean,HttpStatus.ACCEPTED);
+							}
 
-				childData = saveSubAdmin(childData);
-				if (childData.getUserid() != null) {
-					userRepo.save(childData);
-//								web.setIsUsed(true);
-//								if(web.getUsedBy().equalsIgnoreCase("-")){
-//									web.setUsedBy(childData.getUserid()+"("+childData.getUsername()+")");
-//								}else{
-//									web.setUsedBy(web.getUsedBy()+", "+childData.getUserid()+"("+childData.getUsername()+")");
-//								}
-//								
-//								webRepo.save(web);
+				EXUser saveSubAdmin = saveSubAdmin(childData);
+				if (saveSubAdmin.getUserid() != null) {
+					String userid = saveSubAdmin.getUserid();
+					userRepo.save(saveSubAdmin);
+					if (web.getUsedBy() == null) {
+	                    web.setUsedBy(new ArrayList<String>());
+	                }
+					web.getUsedBy().add(userid);
+					webRepo.save(web);
 					responseBean.setData("success");
 					responseBean.setMessage("Success");
 					responseBean.setStatus("Success");
@@ -308,11 +298,12 @@ public class EXUserController {
 		EXUser child = new EXUser();
 		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
 		child.setPassword(encryptPassword);
+		WebsiteBean website = new WebsiteBean();
 		try {
 
 			// child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 			// child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
-			child.setWebsitename(user.getWebsitename());
+			child.setUserName(user.getUserName());
 			child.setUserid(user.getUserid());			
 			child.setUsertype(1);
 			// child.setAccType(EXConstants.SUB_ADMIN);
@@ -320,10 +311,10 @@ public class EXUserController {
 			child.setBetLock(false);
 			child.setIsActive(true);
 			child.setParentId(parent.getId());
-			child.setParentName(parent.getWebsitename());
+			child.setParentName(parent.getUserName());
 			child.setParentUserId(parent.getUserid());
 			child.setAdminId(parent.getId());
-			child.setAdminName(parent.getWebsitename());
+			child.setAdminName(parent.getUserName());
 			child.setAdminUserId(parent.getUserid());
 			child.setSubadminId("0");
 			child.setSubadminName("0");
@@ -345,8 +336,8 @@ public class EXUserController {
 			child.setMyallPl(0.0);
 			child.setMysportPl(0.0);
 			child.setMycasinoPl(0.0);
-			// child.setWebsiteId(userData.getString("websiteId"));
-			// child.setWebsiteName(userData.getString("websiteName"));
+			child.setWebsiteId(new WebsiteBean().getId());
+			child.setWebsiteName(new WebsiteBean().getName());
 			child.setSubChild("0");
 			child.setMobileNumber(user.getMobileNumber());
 			child.setIspasswordChanged(false);
@@ -389,7 +380,7 @@ public class EXUserController {
 			// Date()), "GMT", "IST")));
 			// child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
 			// Date()), "GMT", "IST")));
-			child.setWebsitename(user.getWebsitename());
+			child.setUserName(user.getUserName());
 			child.setUserid(user.getUserid());			
 			
 			child.setUsertype(2);
@@ -402,11 +393,11 @@ public class EXUserController {
 			child.setAdminName(parent.getAdminName());
 			child.setAdminUserId(parent.getAdminUserId());
 			child.setSubadminId(parent.getId());
-			child.setSubadminName(parent.getWebsitename());
+			child.setSubadminName(parent.getUserName());
 			child.setSubadminUserId(parent.getUserid());
 
 			child.setParentId(parent.getId());
-			child.setParentName(parent.getWebsitename());
+			child.setParentName(parent.getUserName());
 			child.setParentUserId(parent.getUserid());
 
 			child.setMiniadminId("0");
@@ -467,7 +458,7 @@ public class EXUserController {
 			// Date()), "GMT", "IST")));
 			// child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
 			// Date()), "GMT", "IST")));
-			child.setWebsitename(user.getWebsitename());
+			child.setUserName(user.getUserName());
 			child.setUserid(user.getUserid());			
 			
 			child.setUsertype(3);
@@ -483,7 +474,7 @@ public class EXUserController {
 			child.setAdminName(parent.getAdminName());
 			child.setAdminUserId(parent.getAdminUserId());
 			child.setMiniadminId(parent.getId());
-			child.setMiniadminName(parent.getWebsitename());
+			child.setMiniadminName(parent.getUserName());
 			child.setMiniadminUserId(parent.getUserid());
 			child.setSupersuperId("0");
 			child.setSupersuperName("0");
@@ -497,7 +488,7 @@ public class EXUserController {
 
 			
 			child.setParentId(parent.getId());
-			child.setParentName(parent.getWebsitename());
+			child.setParentName(parent.getUserName());
 			child.setParentUserId(parent.getUserid());
 			child.setMyBalance(0.0);
 			child.setFixLimit(0.0);
@@ -546,7 +537,7 @@ public class EXUserController {
 		try{
 //			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 //			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
-			child.setWebsitename(user.getWebsitename());
+			child.setUserName(user.getUserName());
 			child.setUserid(user.getUserid());
 			
 			child.setUsertype(4);
@@ -565,7 +556,7 @@ public class EXUserController {
 			child.setMiniadminName(parent.getMiniadminName());
 			child.setMiniadminUserId(parent.getMiniadminUserId());
 			child.setSupersuperId(parent.getId());
-			child.setSupersuperName(parent.getWebsitename());
+			child.setSupersuperName(parent.getUserName());
 			child.setSupersuperUserId(parent.getUserid());
 			child.setSupermasterId("0");
 			child.setSupermasterName("0");
@@ -575,7 +566,7 @@ public class EXUserController {
 			child.setMasterUserId("0");
 
 			child.setParentId(parent.getId());
-			child.setParentName(parent.getWebsitename());
+			child.setParentName(parent.getUserName());
 			child.setParentUserId(parent.getUserid());
 			
 			
@@ -626,7 +617,7 @@ public class EXUserController {
 		try{
 //			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 //			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
-			child.setWebsitename(user.getWebsitename());
+			child.setUserName(user.getUserName());
 			child.setUserid(user.getUserid());
 			
 			child.setUsertype(5);
@@ -648,14 +639,14 @@ public class EXUserController {
 			child.setSupersuperName(parent.getSupersuperName());
 			child.setSupersuperUserId(parent.getSupersuperUserId());
 			child.setSupermasterId(parent.getId());
-			child.setSupermasterName(parent.getWebsitename());
+			child.setSupermasterName(parent.getUserName());
 			child.setSupermasterUserId(parent.getUserid());
 			child.setMasterId("0");
 			child.setMasterName("0");
 			child.setMasterUserId("0");
 			
 			child.setParentId(parent.getId());
-			child.setParentName(parent.getWebsitename());
+			child.setParentName(parent.getUserName());
 			child.setParentUserId(parent.getUserid());
 			
 			
@@ -705,7 +696,7 @@ public class EXUserController {
 		try{
 //			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 //			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
-			child.setWebsitename(user.getWebsitename());
+			child.setUserName(user.getUserName());
 			child.setUserid(user.getUserid());
 			
 			child.setUsertype(6);
@@ -730,11 +721,11 @@ public class EXUserController {
 			child.setSupermasterName(parent.getSupermasterName());
 			child.setSupermasterUserId(parent.getSupermasterUserId());
 			child.setMasterId(parent.getId());
-			child.setMasterName(parent.getWebsitename());
+			child.setMasterName(parent.getUserName());
 			child.setMasterUserId(parent.getUserid());
 			
 			child.setParentId(parent.getId());
-			child.setParentName(parent.getWebsitename());
+			child.setParentName(parent.getUserName());
 			child.setParentUserId(parent.getUserid());
 			
 			
@@ -1052,13 +1043,21 @@ public class EXUserController {
 	
 	
 	@PostMapping("/addWebsite")
-	public ResponseEntity<ResponseBean> saveWebsite(@RequestBody WebsiteBean website) {
-		String name = website.getName();
+	public ResponseEntity<ResponseBean> saveWebsite(@RequestBody EncodedPayload payload) {
+		
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptWebsiteBean";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+	    WebsiteBean decryptData = restTemplate.postForObject(decryptUrl, requestEntity, WebsiteBean.class);
+	    WebsiteBean webBean = webRepo.findByname(decryptData.getName());
+		
+		String name = webBean.getName();
 		if (webRepo.findByName(name) != null) {
 			return ResponseEntity.status(HttpStatus.CONFLICT)
 					.body(new ResponseBean("error", "Website already exist!!", "WebSiteBean"));
 		} else {
-			webRepo.save(website);
+			webRepo.save(webBean);
 		}
 		return ResponseEntity.ok(new ResponseBean("Success", "Website Created Successfully!!", "WebSiteBean"));
 	}
@@ -1068,7 +1067,7 @@ public class EXUserController {
 	@GetMapping("/allWebsite")
 	public ResponseEntity<ResponseBean> listOfWebsite() {
 		List<WebsiteBean> findAll = webRepo.findAll();
-		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptWebsiteBean";
 		HttpHeaders headers = new HttpHeaders();
 	    headers.setContentType(MediaType.APPLICATION_JSON);
 	    EncodedPayload encodedPayload=new EncodedPayload();
