@@ -1408,4 +1408,31 @@ public class EXUserController {
 	}
 	
 	
+	
+	@PostMapping("/depositChips")
+	public ResponseEntity<ResponseBean> depositChips(@RequestBody EncodedPayload payload) {
+		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		EXUser user = userRepo.findByUserid(parent.getUserid());
+		
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptPassword";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+	    EXUser decryptData = restTemplate.postForObject(decryptUrl, requestEntity, EXUser.class);
+	    if(decryptData.getMyBalance()==null || decryptData.getMyBalance()<=0) {
+	    	ResponseBean reponsebean=ResponseBean.builder().data("DepositChips").status("success").message("Enter a valid Chips!!").build();
+			return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+	    }else {
+	    	Double value = user.getMyBalance()+decryptData.getMyBalance();
+	    	user.setMyBalance(value);
+	    	userRepo.save(user);
+	    	ResponseBean reponsebean=ResponseBean.builder().data("DepositChips").status("success").message("Chips updated Successfull!!").build();
+		    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+	    }
+	}
+	
+	
+	
+	
+	
 }
