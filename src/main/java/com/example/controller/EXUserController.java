@@ -41,6 +41,8 @@ import com.example.entity.DepositWithdraw;
 import com.example.entity.EXUser;
 import com.example.entity.EXUserResponse;
 import com.example.entity.EncodedPayload;
+import com.example.entity.HyperMessage;
+import com.example.entity.ImportantMessage;
 import com.example.entity.Partnership;
 import com.example.entity.ResponseBean;
 import com.example.entity.TransactionHistory;
@@ -51,6 +53,8 @@ import com.example.entity.WebsiteBean;
 import com.example.repository.ActivityLogRepo;
 import com.example.repository.Authenticaterepo;
 import com.example.repository.EXUserRepository;
+import com.example.repository.HyperMessageRepo;
+import com.example.repository.ImportantMessageRepo;
 import com.example.repository.TransactionHistoryRepo;
 import com.example.repository.WebsiteBeanRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -90,6 +94,12 @@ public class EXUserController {
 	
 	@Autowired
 	private ActivityLogRepo activityLogRepo;
+	
+	@Autowired
+	private ImportantMessageRepo messageRepo;
+	
+	@Autowired
+	private HyperMessageRepo hyperMessageRepo;
 	
 	
 
@@ -1426,9 +1436,44 @@ public class EXUserController {
 	}
 	
 	
+	@PostMapping("/importantMessage")
+	public ResponseEntity<ResponseBean> setImportantMessage(@RequestBody EncodedPayload payload){
+		if(payload.getPayload()==null){
+			ResponseBean reponsebean=ResponseBean.builder().data("Important Message").status("success").message("Enter a valid Message").build();
+		    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+		}else {
+	    String decryptMessage = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+payload.getPayload(),String.class);
+		ImportantMessage message = new ImportantMessage();
+		message.setMessage(decryptMessage);
+		messageRepo.save(message);
+		String encryptMessage = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptMessage,String.class);
+		
+		ResponseBean reponsebean=ResponseBean.builder().data(encryptMessage).status("success").message("Message Added Successfull!!").build();
+	    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+		}
+	}
 	
 	
+	@GetMapping("/allImportantMessages")
+	public ResponseEntity<ResponseBean> listOfMessages() {
+		List<ImportantMessage> findAll = messageRepo.findAll();
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    EncodedPayload encodedPayload=new EncodedPayload();
+	    Gson gson = new Gson();
+		String data = gson.toJson(findAll);
+		JsonArray jsonArray = new JsonParser().parse(data).getAsJsonArray();
+		JSONObject jObj = new JSONObject();
+		jObj.put("data", jsonArray);
+	    encodedPayload.setPayload(jObj.toString());
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
+	    String encryptMessageData = restTemplate.postForObject(decryptUrl, requestEntity, String.class);
+	    ResponseBean reponsebean=ResponseBean.builder().data(encryptMessageData).status("success").message("All Messages fetch Successfull!!").build();
+		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+	}
 	
+		
 	
 	
 }
