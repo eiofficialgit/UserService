@@ -105,11 +105,7 @@ public class EXUserController {
 	public CompletableFuture<HashMap<String, String>> validateUserConditions(EXUser childData) {
 		HashMap<String, String> response = new HashMap<>();
 		try {
-			if (childData == null) {
-				response.put("type", "error");
-				response.put("message", "Invalid User Data");
-				return CompletableFuture.completedFuture(response);
-			}if (childData.getUserName().equalsIgnoreCase("") || childData.getUserName().length() < 1) {
+			if (childData.getUserName() == null || childData.getUserName().isEmpty() || childData.getUserName().length() < 1) {
 				response.put("type", "error");
 				response.put("message", "username Must be Required");
 				return CompletableFuture.completedFuture(response);
