@@ -113,10 +113,6 @@ public class EXUserController {
 				response.put("type", "error");
 				response.put("message", "username Must be Required");
 				return CompletableFuture.completedFuture(response);
-			} else if (childData.getWebsiteName().equalsIgnoreCase("") || childData.getWebsiteName().length() < 1) {
-				response.put("type", "error");
-				response.put("message", "WebsiteName Must be Required");
-				return CompletableFuture.completedFuture(response);
 			} else if (childData.getEmail() == null || !isValidEmailAddress(childData.getEmail())) {
 				response.put("type", "error");
 				response.put("message", "Invalid Email Address");
@@ -227,6 +223,7 @@ public class EXUserController {
 					if (web.getUsedBy() == null) {
 	                    web.setUsedBy(new ArrayList<String>());
 	                }
+					web.setIsUsed(true);
 					web.getUsedBy().add(userid);
 					webRepo.save(web);
 					responseBean.setData("success");
@@ -1050,24 +1047,25 @@ public class EXUserController {
 	    headers.setContentType(MediaType.APPLICATION_JSON);
 	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
 	    WebsiteBean decryptData = restTemplate.postForObject(decryptUrl, requestEntity, WebsiteBean.class);
-	    WebsiteBean webBean = webRepo.findByname(decryptData.getName());
 		
-		String name = webBean.getName();
+		String name = decryptData.getName();
 		if (webRepo.findByName(name) != null) {
 			return ResponseEntity.status(HttpStatus.CONFLICT)
 					.body(new ResponseBean("error", "Website already exist!!", "WebSiteBean"));
 		} else {
-			webRepo.save(webBean);
+			decryptData.setIsUsed(false);
+			webRepo.save(decryptData);
 		}
 		return ResponseEntity.ok(new ResponseBean("Success", "Website Created Successfully!!", "WebSiteBean"));
 	}
 	
 	
 
+	
 	@GetMapping("/allWebsite")
 	public ResponseEntity<ResponseBean> listOfWebsite() {
 		List<WebsiteBean> findAll = webRepo.findAll();
-		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptWebsiteBean";
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
 		HttpHeaders headers = new HttpHeaders();
 	    headers.setContentType(MediaType.APPLICATION_JSON);
 	    EncodedPayload encodedPayload=new EncodedPayload();
@@ -1414,7 +1412,7 @@ public class EXUserController {
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		EXUser user = userRepo.findByUserid(parent.getUserid());
 		
-		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptPassword";
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
 		HttpHeaders headers = new HttpHeaders();
 	    headers.setContentType(MediaType.APPLICATION_JSON);
 	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
@@ -1430,6 +1428,8 @@ public class EXUserController {
 		    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	    }
 	}
+	
+	
 	
 	
 	
