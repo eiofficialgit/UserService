@@ -1306,9 +1306,15 @@ public class EXUserController {
 	}
 	
 	@GetMapping("/transactionHistory")
-	public ResponseEntity<ResponseBean> transactionHistoryList(@RequestParam("pageNumber") int pageNumber, @RequestParam("pageSize") int pageSize ){
-		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
-		String userid = parent.getUserid();
+	public ResponseEntity<ResponseBean> transactionHistoryList(@RequestBody EncodedPayload payload, @RequestParam("pageNumber") int pageNumber, @RequestParam("pageSize") int pageSize ){
+		
+		String decryptData = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+	    EXUser user = restTemplate.postForObject(decryptData, requestEntity, EXUser.class);
+		
+		String userid = user.getUserid();
 		Pageable pageable = PageRequest.of(pageNumber, pageSize);
 	    Page<TransactionHistory> transactionHistoryList = transactionHistoryRepo.findByfrom(userid, pageable);
 	    TransactionHistoryResponse transactionhistoryresponse = new TransactionHistoryResponse();
@@ -1320,7 +1326,6 @@ public class EXUserController {
 	    transactionhistoryresponse.setTotalPages(transactionHistoryList.getTotalPages());
 	    transactionhistoryresponse.setLastPage(transactionHistoryList.isLast());
 		String decryptUrl = "http://encryptdecrypt-ms/api/encryptPayload";
-		HttpHeaders headers = new HttpHeaders();
 	    headers.setContentType(MediaType.APPLICATION_JSON);
 	    EncodedPayload encodedPayload=new EncodedPayload();
 	    Gson gson = new Gson();
@@ -1329,16 +1334,21 @@ public class EXUserController {
 	    JsonObject jObjs = new JsonObject();
 	    jsonObjects.add("data", jObjs);
 	    encodedPayload.setPayload(jsonObjects.toString());
-	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
-	    String encryptData = restTemplate.postForObject(decryptUrl, requestEntity, String.class);
+	    HttpEntity<EncodedPayload> request = new HttpEntity<>(encodedPayload, headers);
+	    String encryptData = restTemplate.postForObject(decryptUrl, request, String.class);
 	    ResponseBean reponsebean=ResponseBean.builder().data(encryptData).status("success").message("All TransactionHistory Details fetch Successfull!!").build();
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	}
 	
 	@GetMapping("/activityLog")
-	public ResponseEntity<ResponseBean> activityLogList(@RequestParam("pageNumber") int pageNumber, @RequestParam("pageSize") int pageSize) {
-		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
-		String userid = parent.getId();
+	public ResponseEntity<ResponseBean> activityLogList(@RequestBody EncodedPayload payload, @RequestParam("pageNumber") int pageNumber, @RequestParam("pageSize") int pageSize) {
+		String decryptData = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+	    EXUser user = restTemplate.postForObject(decryptData, requestEntity, EXUser.class);
+		
+		String userid = user.getUserid();
 		Pageable pageable = PageRequest.of(pageNumber, pageSize);
 	    Page<ActivityLog> activityList = activityLogRepo.findByuserid(userid, pageable);
 	    ActivityLogResponse activitylogresponse = new ActivityLogResponse();
@@ -1350,7 +1360,6 @@ public class EXUserController {
 	    activitylogresponse.setTotalPages(activityList.getTotalPages());
 	    activitylogresponse.setLastPage(activityList.isLast());
 	    String encryptUrl = "http://encryptdecrypt-ms/api/encryptPayload";
-	    HttpHeaders headers = new HttpHeaders();
 	    headers.setContentType(MediaType.APPLICATION_JSON);
 	    EncodedPayload encodedPayload = new EncodedPayload();
 	    Gson gson = new Gson();
@@ -1359,8 +1368,8 @@ public class EXUserController {
 	    JsonObject jObj = new JsonObject();
 	    jsonObject.add("data", jObj);
 	    encodedPayload.setPayload(jsonObject.toString());
-	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
-	    String encryptData = restTemplate.postForObject(encryptUrl, requestEntity, String.class);
+	    HttpEntity<EncodedPayload> request = new HttpEntity<>(encodedPayload, headers);
+	    String encryptData = restTemplate.postForObject(encryptUrl, request, String.class);
 	    ResponseBean responseBean = ResponseBean.builder().data(encryptData).status("success").message("All Activitylog Details fetch Successful!!").build();
 	    return new ResponseEntity<ResponseBean>(responseBean, HttpStatus.OK);
 	}
