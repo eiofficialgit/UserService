@@ -1482,7 +1482,50 @@ public class EXUserController {
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	}
 	
-		
+	@PostMapping("/saveHyperMessage") 
+	public ResponseEntity<ResponseBean> saveHyperMessage(@RequestBody EncodedPayload payload) {
+	  String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptHyperMessage";
+	  HttpHeaders headers = new HttpHeaders();
+	  headers.setContentType(MediaType.APPLICATION_JSON);
+	  HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+	  HyperMessage decryptedMessage = restTemplate.postForObject(decryptUrl, requestEntity, HyperMessage.class);
+	  hyperMessageRepo.save(decryptedMessage);
+	  return ResponseEntity.ok(new ResponseBean("Success", "HyperMessage Created Successfully!!", "HyperMessage")); 
+	  }
 	
+	@GetMapping("/allHyperMessage")
+	public ResponseEntity<ResponseBean> listOfHyperMessage() {
+		List<HyperMessage> findAll = hyperMessageRepo.findAll();
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    EncodedPayload encodedPayload=new EncodedPayload();
+	    Gson gson = new Gson();
+		String data = gson.toJson(findAll);
+		JsonArray jsonArray = new JsonParser().parse(data).getAsJsonArray();
+		JSONObject jObj = new JSONObject();
+		jObj.put("data", jsonArray);
+	    encodedPayload.setPayload(jObj.toString());
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(encodedPayload, headers);
+	    String encryptwebsiteData = restTemplate.postForObject(decryptUrl, requestEntity, String.class);
+	    ResponseBean reponsebean=ResponseBean.builder().data(encryptwebsiteData).status("success").message("All HyperMessage details fetch Successfull!!").build();
+		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+	}
 	
+	@PutMapping("/updateHyperMessage")
+	public ResponseEntity<ResponseBean> updateHyperMessage(@RequestBody EncodedPayload payload) {		
+	    String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptHyperMessage";
+	    HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+	    HyperMessage decryptedMessage = restTemplate.postForObject(decryptUrl, requestEntity, HyperMessage.class);
+	    String id = decryptedMessage.getId();
+	    HyperMessage hyperMessage = hyperMessageRepo.findById(id).get();
+	    hyperMessage.setWebsiteName(decryptedMessage.getWebsiteName());
+	    hyperMessage.setDate(decryptedMessage.getDate());
+	    hyperMessage.setTitle(decryptedMessage.getTitle());
+	    hyperMessage.setIsLock(decryptedMessage.getIsLock());
+	    hyperMessageRepo.save(hyperMessage);
+	    return ResponseEntity.ok(new ResponseBean("Success", "HyperMessage Updated Successfully!!", "HyperMessage"));
+	}
 }
