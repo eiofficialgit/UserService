@@ -36,6 +36,8 @@ import org.springframework.web.client.RestTemplate;
 import com.example.entity.ActivityLog;
 import com.example.entity.ActivityLogResponse;
 import com.example.entity.ChangePassword;
+import com.example.entity.CreditReferenceLog;
+import com.example.entity.CreditReferenceLogResponse;
 import com.example.entity.DecryptResponse;
 import com.example.entity.DepositWithdraw;
 import com.example.entity.EXUser;
@@ -52,6 +54,7 @@ import com.example.entity.validationModel;
 import com.example.entity.WebsiteBean;
 import com.example.repository.ActivityLogRepo;
 import com.example.repository.Authenticaterepo;
+import com.example.repository.CreditReferenceLogRepo;
 import com.example.repository.EXUserRepository;
 import com.example.repository.HyperMessageRepo;
 import com.example.repository.ImportantMessageRepo;
@@ -100,6 +103,9 @@ public class EXUserController {
 	
 	@Autowired
 	private HyperMessageRepo hyperMessageRepo;
+	
+	@Autowired
+	private CreditReferenceLogRepo creditReferenceLogRepo;
 	
 	
 
@@ -835,7 +841,7 @@ public class EXUserController {
 		ActivityLog log = new ActivityLog();
 		SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 	    Date date = new Date();
-	    log.setUserid(users.getId());
+	    log.setUserid(users.getUserid());
 	    log.setDate_time(sdf.format(date));
 	    log.setIpAddress(httpServletRequest.getRemoteAddr());
 	    log.setLoginStatus("Login--");
@@ -1207,6 +1213,7 @@ public class EXUserController {
 	    EXUser user = restTemplate.postForObject(decryptUrl, requestEntity, EXUser.class);
 	    String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
 	    String userid = user.getUserid();
+	    CreditReferenceLog creditReferenceLog = new CreditReferenceLog();
 		
 		EXUser currentUser = userRepo.findByUserid(userid.toLowerCase());
 		if(user.getFixLimit()==null) {
@@ -1214,8 +1221,15 @@ public class EXUserController {
 			return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		}
 		if(parent.getPassword().equals(encryptPassword)) {
+			creditReferenceLog.setOldValue(currentUser.getFixLimit());
 			currentUser.setFixLimit(user.getFixLimit());
 			userRepo.save(currentUser);
+			SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+		    Date date = new Date();
+			creditReferenceLog.setDate(sdf.format(date));
+			creditReferenceLog.setNewValue(currentUser.getFixLimit());
+			creditReferenceLog.setUserid(currentUser.getUserid());
+			creditReferenceLogRepo.save(creditReferenceLog);
 			ResponseBean reponsebean=ResponseBean.builder().data("CreditReference").status("success").message("Credit Reference updated Successfull!!").build();
 			return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		}else {
@@ -1223,6 +1237,43 @@ public class EXUserController {
 			return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		}
 		
+	}
+	
+	@PostMapping("/creditReferenceLog")
+	public ResponseEntity<ResponseBean> creditReferenceLog(@RequestBody EncodedPayload payload, @RequestParam("pageNumber") int pageNumber, @RequestParam("pageSize") int pageSize) {
+		
+		String decryptData = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+	    EXUser user = restTemplate.postForObject(decryptData, requestEntity, EXUser.class);
+		
+		String userid = user.getUserid();
+		Pageable pageable = PageRequest.of(pageNumber, pageSize);
+	    Page<CreditReferenceLog> creditReferenceList = creditReferenceLogRepo.findByuserid(userid, pageable);
+	    CreditReferenceLogResponse creditReferenceLogResponse = new CreditReferenceLogResponse();
+	    List<CreditReferenceLog> contents = creditReferenceList.getContent();
+	    creditReferenceLogResponse.setContent(contents);
+	    creditReferenceLogResponse.setPageNumber(creditReferenceList.getNumber());
+	    creditReferenceLogResponse.setPageSize(creditReferenceList.getSize());
+	    creditReferenceLogResponse.setTotalElements(creditReferenceList.getTotalElements());
+	    creditReferenceLogResponse.setTotalPages(creditReferenceList.getTotalPages());
+	    creditReferenceLogResponse.setLastPage(creditReferenceList.isLast());	
+	    String encryptUrl = "http://encryptdecrypt-ms/api/encryptPayload";
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    EncodedPayload encodedPayload = new EncodedPayload();
+	    Gson gson = new Gson();
+	    String data = gson.toJson(creditReferenceLogResponse);
+	    JsonObject jsonObject = new JsonParser().parse(data).getAsJsonObject();
+	    JsonObject jObj = new JsonObject();
+	    jsonObject.add("data", jObj);
+	    encodedPayload.setPayload(jsonObject.toString());
+	    HttpEntity<EncodedPayload> request = new HttpEntity<>(encodedPayload, headers);
+	    String encryptData = restTemplate.postForObject(encryptUrl, request, String.class);
+		
+		ResponseBean reponsebean=ResponseBean.builder().data(encryptData).status("success").message("All Credit Reference Log fetch Successfull!!").build();
+		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+	
 	}
 	
 	
@@ -1305,7 +1356,7 @@ public class EXUserController {
 	    return new ResponseEntity<>(responseBean, HttpStatus.OK);
 	}
 	
-	@GetMapping("/transactionHistory")
+	@PostMapping("/transactionHistory")
 	public ResponseEntity<ResponseBean> transactionHistoryList(@RequestBody EncodedPayload payload, @RequestParam("pageNumber") int pageNumber, @RequestParam("pageSize") int pageSize ){
 		
 		String decryptData = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
@@ -1340,7 +1391,7 @@ public class EXUserController {
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	}
 	
-	@GetMapping("/activityLog")
+	@PostMapping("/activityLog")
 	public ResponseEntity<ResponseBean> activityLogList(@RequestBody EncodedPayload payload, @RequestParam("pageNumber") int pageNumber, @RequestParam("pageSize") int pageSize) {
 		String decryptData = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
 		HttpHeaders headers = new HttpHeaders();
@@ -1433,7 +1484,7 @@ public class EXUserController {
 	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
 	    EXUser decryptData = restTemplate.postForObject(decryptUrl, requestEntity, EXUser.class);
 	    if(decryptData.getMyBalance()==null || decryptData.getMyBalance()<=0) {
-	    	ResponseBean reponsebean=ResponseBean.builder().data("DepositChips").status("success").message("Enter a valid Chips!!").build();
+	    	ResponseBean reponsebean=ResponseBean.builder().data("DepositChips").status("Error").message("Enter a valid Chips!!").build();
 			return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	    }else {
 	    	Double value = user.getMyBalance()+decryptData.getMyBalance();
@@ -1448,7 +1499,7 @@ public class EXUserController {
 	@PostMapping("/importantMessage")
 	public ResponseEntity<ResponseBean> setImportantMessage(@RequestBody EncodedPayload payload){
 		if(payload.getPayload()==null){
-			ResponseBean reponsebean=ResponseBean.builder().data("Important Message").status("success").message("Enter a valid Message").build();
+			ResponseBean reponsebean=ResponseBean.builder().data("Important Message").status("Error").message("Enter a valid Message").build();
 		    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		}else {
 	    String decryptMessage = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+payload.getPayload(),String.class);
