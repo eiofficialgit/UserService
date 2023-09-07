@@ -8,8 +8,8 @@ import lombok.NoArgsConstructor;
 public class HyperMessage {
 	
 	private String id;
-	private String websiteName;
 	private String title;
+	private String message;
 	private String date;
 	private String isLock;
 

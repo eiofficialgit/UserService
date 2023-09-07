@@ -1471,8 +1471,6 @@ public class EXUserController {
 		
 	}
 	
-	
-	
 	@PostMapping("/depositChips")
 	public ResponseEntity<ResponseBean> depositChips(@RequestBody EncodedPayload payload) {
 		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
@@ -1495,7 +1493,6 @@ public class EXUserController {
 	    }
 	}
 	
-	
 	@PostMapping("/importantMessage")
 	public ResponseEntity<ResponseBean> setImportantMessage(@RequestBody EncodedPayload payload){
 		if(payload.getPayload()==null){
@@ -1512,7 +1509,6 @@ public class EXUserController {
 	    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		}
 	}
-	
 	
 	@GetMapping("/allImportantMessages")
 	public ResponseEntity<ResponseBean> listOfMessages() {
@@ -1572,7 +1568,7 @@ public class EXUserController {
 	    HyperMessage decryptedMessage = restTemplate.postForObject(decryptUrl, requestEntity, HyperMessage.class);
 	    String id = decryptedMessage.getId();
 	    HyperMessage hyperMessage = hyperMessageRepo.findById(id).get();
-	    hyperMessage.setWebsiteName(decryptedMessage.getWebsiteName());
+	    hyperMessage.setMessage(decryptedMessage.getMessage());
 	    hyperMessage.setDate(decryptedMessage.getDate());
 	    hyperMessage.setTitle(decryptedMessage.getTitle());
 	    hyperMessage.setIsLock(decryptedMessage.getIsLock());
