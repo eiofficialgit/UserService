@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -1104,7 +1105,11 @@ public class EXUserController {
 	
 	@GetMapping("/{parentId}/{usertype}")
 	public ResponseEntity<ResponseBean> listOnHierarchy(@PathVariable String parentId, @PathVariable Integer usertype, @RequestParam("pageNumber") int pageNumber,@RequestParam("pageSize") int pageSize){
-		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		
+		EXUser exUser = userRepo.findById(parentId).get();
+		
+		if(exUser.getBetLock()==false) {
+			EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		if(parent.getUsertype()<usertype) {
 			Pageable pageable = PageRequest.of(pageNumber, pageSize);
 			Page<EXUser> findByUsertype = userRepo.findByParentIdAndUsertype(parentId, usertype, pageable);
@@ -1131,8 +1136,12 @@ public class EXUserController {
 		    String encryptData = restTemplate.postForObject(encryptUrl, requestEntity, String.class);
 		    ResponseBean responseBean = ResponseBean.builder().data(encryptData).status("success").message("All Childs fetch Successful!!").build();
 		    return new ResponseEntity<>(responseBean, HttpStatus.OK);
+		      }else {
+			        ResponseBean responseBean = ResponseBean.builder().data("Downline List").status("Error").message("Something went wrong!!").build();
+		            return new ResponseEntity<>(responseBean, HttpStatus.OK);
+		}
 		}else {
-			ResponseBean responseBean = ResponseBean.builder().data("Downline List").status("Error").message("Something went wrong!!").build();
+			ResponseBean responseBean = ResponseBean.builder().data("Downline List").status("Error").message("Account Suspended Please contact the Admin").build();
 		    return new ResponseEntity<>(responseBean, HttpStatus.OK);
 		}
 	}
@@ -1212,13 +1221,17 @@ public class EXUserController {
 		
 		if(parent.getPassword().equals(encryptPassword)) {
 	    
-		     if(action.equalsIgnoreCase("lock") || action.equalsIgnoreCase("suspend")) {
+		     if(action.equalsIgnoreCase("lock")) {
 			    lockUserAndDescendants(user);
 		      }
 		
 		      else if(action.equalsIgnoreCase("active")) {
 			    activeUserAndDescendants(user);
-		     }
+		      }
+		     
+		      else if(action.equalsIgnoreCase("suspend")) {
+		    	  suspendUserAndDescendants(user);
+			  }
 		
 		     ResponseBean responseBean = ResponseBean.builder().data("UserAction").status("success").message("User and their child users status updated successfully").build();
 	         return new ResponseEntity<>(responseBean, HttpStatus.OK);
@@ -1232,7 +1245,7 @@ public class EXUserController {
 	private void lockUserAndDescendants(EXUser user) {
 	    user.setIsActive(false);
 	    user.setAccountLock(true);
-	    user.setBetLock(true);
+	    user.setBetLock(false);
 	    authenticaterepo.save(user);
 
 	    List<EXUser> childUsers = userRepo.findByParentId(user.getId());
@@ -1245,6 +1258,18 @@ public class EXUserController {
 	    user.setIsActive(true);
 	    user.setAccountLock(false);
 	    user.setBetLock(false);
+	    authenticaterepo.save(user);
+
+	    List<EXUser> childUsers = userRepo.findByParentId(user.getId());
+	    for (EXUser childUser : childUsers) {
+	    	activeUserAndDescendants(childUser);
+	    }
+	}
+	
+	private void suspendUserAndDescendants(EXUser user) {
+	    user.setIsActive(false);
+	    user.setAccountLock(true);
+	    user.setBetLock(true);
 	    authenticaterepo.save(user);
 
 	    List<EXUser> childUsers = userRepo.findByParentId(user.getId());
