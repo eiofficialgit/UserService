@@ -34,6 +34,8 @@ public class EXUser {
 	private String newPassword;
 	 
 	private  Integer usertype;
+	
+	private String payload;
 
 	private  Boolean accountLock;
 	

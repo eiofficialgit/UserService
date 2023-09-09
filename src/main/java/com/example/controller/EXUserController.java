@@ -23,6 +23,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -836,6 +837,11 @@ public class EXUserController {
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.UNAUTHORIZED);
 		}
 		
+		if (!users.getIsActive()) {
+            ResponseBean responseBean = ResponseBean.builder().data("ManagementHome").status("Error").message("Account Locked Please contact the Admin").build();
+            return new ResponseEntity<>(responseBean, HttpStatus.UNAUTHORIZED);
+        }
+		
 		httpSession.setAttribute("EXUser", users);
 		
 		ActivityLog log = new ActivityLog();
@@ -1188,6 +1194,65 @@ public class EXUserController {
 
 	    return new PageImpl<>(content.subList(start, end), pageable, content.size());
 	}
+	
+	
+	@PostMapping("/action/{action}")
+	public ResponseEntity<ResponseBean> action(@RequestBody EncodedPayload payload, @PathVariable String action ){
+		
+		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		
+		
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+        DecryptResponse decryptData = restTemplate.postForObject(decryptUrl, requestEntity, DecryptResponse.class);
+        String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode=" + decryptData.getPassword(), String.class);
+	    EXUser user = authenticaterepo.findByUserid(decryptData.getUserid());
+		
+		if(parent.getPassword().equals(encryptPassword)) {
+	    
+		     if(action.equalsIgnoreCase("accountLock") || action.equalsIgnoreCase("betLock")) {
+			    lockUserAndDescendants(user);
+		      }
+		
+		      else if(action.equalsIgnoreCase("isActive")) {
+			    activeUserAndDescendants(user);
+		     }
+		
+		     ResponseBean responseBean = ResponseBean.builder().data("UserAction").status("success").message("User and their child users status updated successfully").build();
+	         return new ResponseEntity<>(responseBean, HttpStatus.OK);
+	
+	   }else {
+		ResponseBean responseBean = ResponseBean.builder().data("UserAction").status("Error").message("Enter a valid Password!!").build();
+	    return new ResponseEntity<>(responseBean, HttpStatus.OK);
+	   }
+	}
+	
+	private void lockUserAndDescendants(EXUser user) {
+	    user.setIsActive(false);
+	    user.setAccountLock(true);
+	    user.setBetLock(true);
+	    authenticaterepo.save(user);
+
+	    List<EXUser> childUsers = userRepo.findByParentId(user.getId());
+	    for (EXUser childUser : childUsers) {
+	        lockUserAndDescendants(childUser);
+	    }
+	}
+	
+	private void activeUserAndDescendants(EXUser user) {
+	    user.setIsActive(true);
+	    user.setAccountLock(false);
+	    user.setBetLock(false);
+	    authenticaterepo.save(user);
+
+	    List<EXUser> childUsers = userRepo.findByParentId(user.getId());
+	    for (EXUser childUser : childUsers) {
+	    	activeUserAndDescendants(childUser);
+	    }
+	}
+	
 
 	
 	
@@ -1495,31 +1560,37 @@ public class EXUserController {
 	
 	@PostMapping("/importantMessage")
 	public ResponseEntity<ResponseBean> setImportantMessage(@RequestBody EncodedPayload payload){
-		if(payload.getPayload()==null){
+		
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+	    EXUser decryptData = restTemplate.postForObject(decryptUrl, requestEntity, EXUser.class);
+		
+		if(decryptData.getPayload()==null || decryptData.getPayload().equalsIgnoreCase("")){
 			ResponseBean reponsebean=ResponseBean.builder().data("Important Message").status("Error").message("Enter a valid Message").build();
 		    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		}else {
-	    String decryptMessage = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/decode?decode="+payload.getPayload(),String.class);
 		ImportantMessage message = new ImportantMessage();
-		message.setMessage(decryptMessage);
+		message.setMessage(decryptData.getPayload());
 		messageRepo.save(message);
-		String encryptMessage = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptMessage,String.class);
 		
-		ResponseBean reponsebean=ResponseBean.builder().data(encryptMessage).status("success").message("Message Added Successfull!!").build();
+		ResponseBean reponsebean=ResponseBean.builder().data("Important message").status("success").message("Message Added Successfull!!").build();
 	    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		}
 	}
 	
-	@GetMapping("/allImportantMessages")
+	@GetMapping("/currentImportantMessage")
 	public ResponseEntity<ResponseBean> listOfMessages() {
 		List<ImportantMessage> findAll = messageRepo.findAll();
+		ImportantMessage importantMessage = findAll.get(findAll.size()-1);
 		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
 		HttpHeaders headers = new HttpHeaders();
 	    headers.setContentType(MediaType.APPLICATION_JSON);
 	    EncodedPayload encodedPayload=new EncodedPayload();
 	    Gson gson = new Gson();
-		String data = gson.toJson(findAll);
-		JsonArray jsonArray = new JsonParser().parse(data).getAsJsonArray();
+		String data = gson.toJson(importantMessage);
+		JsonObject jsonArray = new JsonParser().parse(data).getAsJsonObject();
 		JSONObject jObj = new JSONObject();
 		jObj.put("data", jsonArray);
 	    encodedPayload.setPayload(jObj.toString());
@@ -1574,5 +1645,18 @@ public class EXUserController {
 	    hyperMessage.setIsLock(decryptedMessage.getIsLock());
 	    hyperMessageRepo.save(hyperMessage);
 	    return ResponseEntity.ok(new ResponseBean("Success", "HyperMessage Updated Successfully!!", "HyperMessage"));
+	}
+	
+	@DeleteMapping("/deleteHyperMessage")
+	public ResponseEntity<ResponseBean> deleteHyperMessage(@RequestBody EncodedPayload payload) {		
+	    String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptHyperMessage";
+	    HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+	    HyperMessage decryptedMessage = restTemplate.postForObject(decryptUrl, requestEntity, HyperMessage.class);
+	    String id = decryptedMessage.getId();
+	    HyperMessage hyperMessage = hyperMessageRepo.findById(id).get();
+	    hyperMessageRepo.delete(hyperMessage);
+	    return ResponseEntity.ok(new ResponseBean("Success", "HyperMessage Deleted Successfully!!", "HyperMessage"));
 	}
 }
