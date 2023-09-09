@@ -1212,11 +1212,11 @@ public class EXUserController {
 		
 		if(parent.getPassword().equals(encryptPassword)) {
 	    
-		     if(action.equalsIgnoreCase("accountLock") || action.equalsIgnoreCase("betLock")) {
+		     if(action.equalsIgnoreCase("lock") || action.equalsIgnoreCase("suspend")) {
 			    lockUserAndDescendants(user);
 		      }
 		
-		      else if(action.equalsIgnoreCase("isActive")) {
+		      else if(action.equalsIgnoreCase("active")) {
 			    activeUserAndDescendants(user);
 		     }
 		
@@ -1531,6 +1531,28 @@ public class EXUserController {
 		HttpEntity<EXUser> userRequestEntity = new HttpEntity<>(user, headers);
 		String encryptUserData = restTemplate.postForObject(encryptUrl, userRequestEntity, String.class);
 
+		ResponseBean reponsebean=ResponseBean.builder().data(encryptUserData).status("success").message("User login Successfull!!").build();
+		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+		
+	}
+	
+	
+	@PostMapping("/searchUser")
+	public ResponseEntity<ResponseBean> searchUser(@RequestBody EncodedPayload payload) {
+		
+		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
+	    EXUser decryptData = restTemplate.postForObject(decryptUrl, requestEntity, EXUser.class);
+		
+		EXUser user = authenticaterepo.findByUserid(decryptData.getUserid());
+		
+		String  encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+		HttpEntity<EXUser> userRequestEntity = new HttpEntity<>(user, headers);
+		String encryptUserData = restTemplate.postForObject(encryptUrl, userRequestEntity, String.class);
+		
 		ResponseBean reponsebean=ResponseBean.builder().data(encryptUserData).status("success").message("User login Successfull!!").build();
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		
