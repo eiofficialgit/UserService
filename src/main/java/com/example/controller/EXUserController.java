@@ -1106,9 +1106,9 @@ public class EXUserController {
 	@GetMapping("/{parentId}/{usertype}")
 	public ResponseEntity<ResponseBean> listOnHierarchy(@PathVariable String parentId, @PathVariable Integer usertype, @RequestParam("pageNumber") int pageNumber,@RequestParam("pageSize") int pageSize){
 		
-//		EXUser exUser = userRepo.findById(parentId).get();
+		EXUser exUser = userRepo.findById(parentId).get();
 		
-//		if(exUser.getBetLock()==false) {
+		if(exUser.getBetLock()==false) {
 			EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
 		if(parent.getUsertype()<usertype) {
 			Pageable pageable = PageRequest.of(pageNumber, pageSize);
@@ -1140,10 +1140,10 @@ public class EXUserController {
 			        ResponseBean responseBean = ResponseBean.builder().data("Downline List").status("Error").message("Something went wrong!!").build();
 		            return new ResponseEntity<>(responseBean, HttpStatus.OK);
 		}
-//		}else {
-//			ResponseBean responseBean = ResponseBean.builder().data("Downline List").status("Error").message("Account Suspended Please contact the Admin").build();
-//		    return new ResponseEntity<>(responseBean, HttpStatus.OK);
-//		}
+		}else {
+			ResponseBean responseBean = ResponseBean.builder().data("Downline List").status("Error").message("Account Suspended Please contact the Admin").build();
+		    return new ResponseEntity<>(responseBean, HttpStatus.OK);
+		}
 	}
 	
 	
