@@ -1,16 +1,20 @@
 package com.example.controller;
 
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -37,7 +41,6 @@ import org.springframework.web.client.RestTemplate;
 
 import com.example.entity.ActivityLog;
 import com.example.entity.ActivityLogResponse;
-import com.example.entity.ChangePassword;
 import com.example.entity.CreditReferenceLog;
 import com.example.entity.CreditReferenceLogResponse;
 import com.example.entity.DecryptResponse;
@@ -47,12 +50,12 @@ import com.example.entity.EXUserResponse;
 import com.example.entity.EncodedPayload;
 import com.example.entity.HyperMessage;
 import com.example.entity.ImportantMessage;
+import com.example.entity.Match;
 import com.example.entity.Partnership;
 import com.example.entity.ResponseBean;
 import com.example.entity.TransactionHistory;
 import com.example.entity.TransactionHistoryResponse;
 import com.example.entity.UserStake;
-import com.example.entity.validationModel;
 import com.example.entity.WebsiteBean;
 import com.example.repository.ActivityLogRepo;
 import com.example.repository.Authenticaterepo;
@@ -60,9 +63,9 @@ import com.example.repository.CreditReferenceLogRepo;
 import com.example.repository.EXUserRepository;
 import com.example.repository.HyperMessageRepo;
 import com.example.repository.ImportantMessageRepo;
+import com.example.repository.MatchRepo;
 import com.example.repository.TransactionHistoryRepo;
 import com.example.repository.WebsiteBeanRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -105,6 +108,9 @@ public class EXUserController {
 	
 	@Autowired
 	private HyperMessageRepo hyperMessageRepo;
+	
+	@Autowired
+	private MatchRepo matchRepo;
 	
 	@Autowired
 	private CreditReferenceLogRepo creditReferenceLogRepo;
@@ -1706,4 +1712,46 @@ public class EXUserController {
 	    hyperMessageRepo.delete(hyperMessage);
 	    return ResponseEntity.ok(new ResponseBean("Success", "HyperMessage Deleted Successfully!!", "HyperMessage"));
 	}
+	
+	@GetMapping("/allMatches")
+    public JsonNode allMatches() {
+        Request request = new Request.Builder()
+                .url("https://data.mainredis.in/api/match/getMatches?isActive=true&isResult=false&type=own&sportId=124")
+                .build();
+        ObjectMapper objectMapper = new ObjectMapper();
+        OkHttpClient httpClient = new OkHttpClient();
+        try (Response response = httpClient.newCall(request).execute()) {
+            if (response.isSuccessful()) {
+                JsonNode responseBody = objectMapper.readTree(response.body().string());
+                return responseBody;
+            } else {
+                return objectMapper.createObjectNode().put("error", "HTTP error: " + response.code());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return objectMapper.createObjectNode().put("error", "Exception: " + e.getMessage());
+        }
+    }
+	
+	@PostMapping("/saveMatch")
+	public ResponseEntity<ResponseBean> saveMatch(@RequestBody Match match) {
+		Match findByeventId = matchRepo.findByeventId(match.getEventId());
+		if(findByeventId == null) {
+			matchRepo.save(match);
+		    ResponseBean reponsebean=ResponseBean.builder().data("MatchEntity").status("success").message("Match Addedd Successfully!!").build();
+		    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+		}
+		else {
+		    ResponseBean reponsebean=ResponseBean.builder().data("MatchEntity").status("error").message("Match Already Exist!!").build();
+		    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+		}
+    }
+	
+	@GetMapping("/allSaveMatches")
+	public List<Match> allSaveMatches() {
+		 List<Match> findAll = matchRepo.findAll();
+		 return findAll;
+	}
+	
+	
 }
