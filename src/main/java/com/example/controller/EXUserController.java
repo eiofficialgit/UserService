@@ -1737,6 +1737,7 @@ public class EXUserController {
 	public ResponseEntity<ResponseBean> saveMatch(@RequestBody Match match) {
 		Match findByeventId = matchRepo.findByeventId(match.getEventId());
 		if(findByeventId == null) {
+			match.setActive(true);
 			matchRepo.save(match);
 		    ResponseBean reponsebean=ResponseBean.builder().data("MatchEntity").status("success").message("Match Addedd Successfully!!").build();
 		    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
@@ -1747,10 +1748,26 @@ public class EXUserController {
 		}
     }
 	
-	@GetMapping("/allSaveMatches")
-	public List<Match> allSaveMatches() {
-		 List<Match> findAll = matchRepo.findAll();
+	@GetMapping("/allSaveMatches/{isActive}")
+	public List<Match> allSaveMatches(@PathVariable boolean isActive) {
+		 List<Match> findAll = matchRepo.findByisActive(isActive);
 		 return findAll;
+	}
+	
+	@PostMapping("/activeInactiveMatches")
+	public ResponseEntity<ResponseBean> allSaveMatches(@RequestBody Match match) {
+		Match findByeventId = matchRepo.findByeventId(match.getEventId());
+		if(match.isActive()) {
+		findByeventId.setActive(true);
+		matchRepo.save(findByeventId);
+		ResponseBean reponsebean=ResponseBean.builder().data("MatchEntity").status("success").message(findByeventId.getEventName() +" Active Successfully!!").build();
+	    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+		}else {
+			findByeventId.setActive(false);
+			matchRepo.save(findByeventId);
+			ResponseBean reponsebean=ResponseBean.builder().data("MatchEntity").status("success").message(findByeventId.getEventName() +" Inactive Successfully!!").build();
+		    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
+		}
 	}
 	
 	

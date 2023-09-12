@@ -6,11 +6,15 @@ import org.springframework.data.annotation.Id;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
+@Getter
+@Setter
 public class Match {
 	
 	@Id
@@ -26,8 +30,8 @@ public class Match {
 	private String eventName;
 	private String fancyAType;
 	private String fancyProvider;
-	private boolean isActive;
-	private boolean isResult;
+	public boolean isActive;
+	public boolean isResult;
 	private String mEventId;
 	private String mType;
 	private String marketId;
