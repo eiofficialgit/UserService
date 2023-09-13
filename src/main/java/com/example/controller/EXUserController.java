@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -17,10 +18,13 @@ import okhttp3.Request;
 import okhttp3.Response;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -178,9 +182,6 @@ public class EXUserController {
 			return CompletableFuture.completedFuture(response);
 		}
 
-//		response.put("type", "success");
-//		response.put("message", "Pass");
-//		return CompletableFuture.completedFuture(response);
 	}
 
 	public boolean isValidEmailAddress(String email) {
@@ -200,7 +201,6 @@ public class EXUserController {
 
 	@PostMapping("/validateUserCreation")
 	public ResponseEntity<Object> validateUserCreation(@RequestBody EncodedPayload payload) {			
-		EXUser parentData = (EXUser) httpSession.getAttribute("EXUser");	
 		ResponseBean responseBean = new ResponseBean();
 		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
 		HttpHeaders headers = new HttpHeaders();
@@ -210,7 +210,7 @@ public class EXUserController {
 		
 		
 		try {
-			EXUser checkUser = userRepo.findByUserid(((EXUser) parentData).getUserid().toLowerCase());
+			EXUser checkUser = userRepo.findByUserid(((EXUser) childData).getUserid().toLowerCase());
 			ArrayList isValidUser = new ArrayList<>();
 
 			CompletableFuture<HashMap<String, String>> conditions = validateUserConditions(childData);
@@ -227,7 +227,7 @@ public class EXUserController {
 				responseBean.setStatus("Error");
 				return new ResponseEntity<Object>(responseBean, HttpStatus.ACCEPTED);
 			}
-			if (((EXUser) parentData).getUsertype() == 0) {
+			if (((EXUser) childData).getUsertype() == 0) {
 							WebsiteBean web = webRepo.findByname(childData.getWebsiteName());
 							if(web == null){
 								responseBean.setData("error");
@@ -251,46 +251,46 @@ public class EXUserController {
 					responseBean.setStatus("Success");
 					return new ResponseEntity<Object>(responseBean, HttpStatus.OK);
 				}
-			} else if (((EXUser) parentData).getUsertype() == 1) {
-				childData = saveMiniAdmin(childData);
+			} else if (((EXUser) childData).getUsertype() == 1) {
+				EXUser saveMiniAdmin = saveMiniAdmin(childData);
 				if (childData.getUserid() != null) {
-					userRepo.save(childData);
+					userRepo.save(saveMiniAdmin);
 					responseBean.setData("success");
 					responseBean.setMessage("Success");
 					responseBean.setStatus("Success");
 					return new ResponseEntity<Object>(responseBean, HttpStatus.OK);
 				}
-			}else if(((EXUser) parentData).getUsertype() == 2){
-				checkUser = saveSuperSuper(childData);
+			}else if(((EXUser) childData).getUsertype() == 2){
+				EXUser saveSuperSuper = saveSuperSuper(childData);
 				if(checkUser.getUserid()!=null){
-					userRepo.save(checkUser);
+					userRepo.save(saveSuperSuper);
 					responseBean.setData("success");
 					responseBean.setMessage("Success");
 					responseBean.setStatus("Success");
 					return new ResponseEntity<Object>(responseBean,HttpStatus.OK);
 				}
-			}else if(((EXUser) parentData).getUsertype() == 3){
-				checkUser = saveSuperMaster(childData);
+			}else if(((EXUser) childData).getUsertype() == 3){
+				EXUser saveSuperMaster = saveSuperMaster(childData);
 				if(checkUser.getUserid()!=null){
-					userRepo.save(checkUser);
+					userRepo.save(saveSuperMaster);
 					responseBean.setData("success");
 					responseBean.setMessage("Success");
 					responseBean.setStatus("Success");
 					return new ResponseEntity<Object>(responseBean,HttpStatus.OK);
 				}
-			}else if(((EXUser) parentData).getUsertype() == 4){
-				checkUser = saveMaster(childData);
+			}else if(((EXUser) childData).getUsertype() == 4){
+				EXUser saveMaster = saveMaster(childData);
 				if(checkUser.getUserid()!=null){
-					userRepo.save(checkUser);
+					userRepo.save(saveMaster);
 					responseBean.setData("success");
 					responseBean.setMessage("Success");
 					responseBean.setStatus("Success");
 					return new ResponseEntity<Object>(responseBean,HttpStatus.OK);
 				}
-			}else if(((EXUser) parentData).getUsertype() == 5){
-				checkUser = saveUser(childData);
+			}else if(((EXUser) childData).getUsertype() == 5){
+				EXUser saveUser = saveUser(childData);
 				if(checkUser.getUserid()!=null){
-					userRepo.save(checkUser);
+					userRepo.save(saveUser);
 					responseBean.setData("success");
 					responseBean.setMessage("Success");
 					responseBean.setStatus("Success");
@@ -310,7 +310,7 @@ public class EXUserController {
 	}
 
 	public EXUser saveSubAdmin(EXUser user) throws Exception {
-		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		EXUser parent = userRepo.findById(user.getId()).get();
 		
 		EXUser child = new EXUser();
 		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
@@ -318,8 +318,6 @@ public class EXUserController {
 		WebsiteBean website = new WebsiteBean();
 		try {
 
-			// child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
-			// child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 			child.setUserName(user.getUserName());
 			child.setUserid(user.getUserid());			
 			child.setUsertype(1);
@@ -363,7 +361,7 @@ public class EXUserController {
 			child.setLastName(user.getLastName());
 			child.setTimeZone(user.getTimeZone());
 			child.setEmail(user.getEmail());
-			child.setExposureLimit(1000.0);
+			child.setExposureLimit(0.0);
 
 			Partnership childPartnership = new Partnership();
 
@@ -387,16 +385,11 @@ public class EXUserController {
 
 	public EXUser saveMiniAdmin(EXUser user) {
 		
-		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		EXUser parent = userRepo.findById(user.getId()).get();
 		EXUser child = new EXUser();
 		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
 		child.setPassword(encryptPassword);
 		try {
-
-			// child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
-			// Date()), "GMT", "IST")));
-			// child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
-			// Date()), "GMT", "IST")));
 			child.setUserName(user.getUserName());
 			child.setUserid(user.getUserid());			
 			
@@ -465,16 +458,12 @@ public class EXUserController {
 	}
 	
 	public EXUser saveSuperSuper(EXUser user){
-		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		EXUser parent = userRepo.findById(user.getId()).get();
 		EXUser child = new EXUser();
 		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
 		child.setPassword(encryptPassword);
 		try {
 
-			// child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
-			// Date()), "GMT", "IST")));
-			// child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new
-			// Date()), "GMT", "IST")));
 			child.setUserName(user.getUserName());
 			child.setUserid(user.getUserid());			
 			
@@ -547,13 +536,12 @@ public class EXUserController {
 	
 	
 	public EXUser saveSuperMaster(EXUser user){
-		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		EXUser parent = userRepo.findById(user.getId()).get();
 		EXUser child = new EXUser();
 		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
 		child.setPassword(encryptPassword);
 		try{
-//			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
-//			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
+
 			child.setUserName(user.getUserName());
 			child.setUserid(user.getUserid());
 			
@@ -627,13 +615,11 @@ public class EXUserController {
 	
 	
 	public EXUser saveMaster(EXUser user){
-		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		EXUser parent = userRepo.findById(user.getId()).get();
 		EXUser child = new EXUser();
 		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
 		child.setPassword(encryptPassword);
 		try{
-//			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
-//			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
 			child.setUserName(user.getUserName());
 			child.setUserid(user.getUserid());
 			
@@ -706,13 +692,12 @@ public class EXUserController {
 	
 	
 	public EXUser saveUser(EXUser user){
-		EXUser parent = (EXUser) httpSession.getAttribute("EXUser");
+		EXUser parent = userRepo.findById(user.getId()).get();
 		EXUser child = new EXUser();
 		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
 		child.setPassword(encryptPassword);
 		try{
-//			child.setCreatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
-//			child.setUpdatedOn(dateFormater.parse(dtUtil.convTimeZone2(dateFormater.format(new Date()), "GMT", "IST")));
+
 			child.setUserName(user.getUserName());
 			child.setUserid(user.getUserid());
 			
@@ -818,9 +803,11 @@ public class EXUserController {
 	}
 
 
+	@Autowired
+    private RedisTemplate<String, String> redisTemplate;
 	
 	
-	
+
 	@PostMapping("/managementHome")
 	public ResponseEntity<ResponseBean> managementHome(@RequestBody EncodedPayload payload) {
 		
@@ -830,24 +817,29 @@ public class EXUserController {
 	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
 	    DecryptResponse decryptData = restTemplate.postForObject(decryptUrl, requestEntity, DecryptResponse.class);
 	    String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+decryptData.getPassword(),String.class);
-		EXUser users = authenticaterepo.findByUserid(decryptData.getUserid());
+		EXUser user = authenticaterepo.findByUserid(decryptData.getUserid());
+		httpSession.invalidate();
+		user.setSessionId(httpSession.getId());
+		authenticaterepo.save(user);
 		
 		//user name null or wrong
-		if(users==null) {
+		if(user==null) {
 			ResponseBean reponsebean=ResponseBean.builder().data("ManagementHome").status("Error").message("Wrong UserId!!!").build();
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.UNAUTHORIZED);
 		}
 		
 		//user password null or wrong
-		if(!users.getPassword().equals(encryptPassword)) {
+		if(!user.getPassword().equals(encryptPassword)) {
 			ResponseBean reponsebean=ResponseBean.builder().data("ManagementHome").status("Error").message("Wrong password!!!").build();
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.UNAUTHORIZED);
 		}
 		
-		if (!users.getIsActive()) {
+		if (!user.getIsActive()) {
             ResponseBean responseBean = ResponseBean.builder().data("ManagementHome").status("Error").message("Account Locked Please contact the Admin").build();
             return new ResponseEntity<>(responseBean, HttpStatus.UNAUTHORIZED);
         }
+		
+		EXUser users = authenticaterepo.findByUserid(decryptData.getUserid());
 		
 		httpSession.setAttribute("EXUser", users);
 		
@@ -859,6 +851,11 @@ public class EXUserController {
 	    log.setIpAddress(httpServletRequest.getRemoteAddr());
 	    log.setLoginStatus("Login--");
 	    activityLogRepo.save(log);
+	    
+	    String sessionId = httpSession.getId();
+	    String redisKey = "session_Id:" + sessionId;		
+	    redisTemplate.opsForValue().set(redisKey, sessionId);
+	    
 		
 		String  encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
 		HttpEntity<EXUser> userRequestEntity = new HttpEntity<>(users, headers);
@@ -868,179 +865,28 @@ public class EXUserController {
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	}
 	
+	@GetMapping("/checkSession")
+	public ResponseEntity<ResponseBean> checkSession() {
+		    EXUser parent = (EXUser) httpSession.getAttribute("EXUser");    
+		
+	        String userId = parent.getSessionId();
+	        String sessionId = httpSession.getId();
+	        String redisKey = "session_Id:" + sessionId;
+	        String storedSessionId = redisTemplate.opsForValue().get(redisKey);
 
-		// String host = req.getHeader("host");
-		// ModelAndView model = new ModelAndView();
-		// HttpSession session = request.getSession(true);
-		// EXUser usersession =(EXUser) session.getAttribute("user");
-		// EXUser user = null;
-		// session.removeAttribute("userid");
-		// FirebaseDatabase firebaseDatabase = null;
-		// Calendar calendar = new GregorianCalendar();
-		// TimeZone timeZone = calendar.getTimeZone();
-		//ResponseBean rbean = new ResponseBean();
-		// String ipaddress = login.getAdminId();
-		/*
-		 * // Boolean isLoginValid = false; LoginRequest findByUsersId =
-		 * userRepo.findByUsersId(login.getUserid());
-		 * 
-		 * if(findByUsersId==null) { return
-		 * ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new
-		 * ResponseBean("error","UserId and password required","Management login")); }
-		 * 
-		 * if(findByUsersId!=null &&
-		 * findByUsersId.getPassword().equals(login.getPassword())) { return
-		 * ResponseEntity.ok(new
-		 * ResponseBean("Success","Login successful!","Management login")); }
-		 * 
-		 * //sucess ResponseBean reponsebean=ResponseBean.builder().message(sucess fully
-		 * login).ty }
-		 */
+	        if (userId.equals(storedSessionId)) {
+	            ResponseBean responseBean = ResponseBean.builder().data("Session is valid").status("success").build();
+	            return new ResponseEntity<>(responseBean, HttpStatus.OK);
+	        } else {
+	            httpSession.invalidate();
+	            ResponseBean responseBean = ResponseBean.builder().data("Session mismatch, user logged out").status("error").build();
+	            return new ResponseEntity<>(responseBean, HttpStatus.UNAUTHORIZED);
+	        }
+	    
+	}
+
 	
-			// rbean.setMessage("Please Fill All The Credential");
-			// rbean.setType("error");
-			// rbean.setTitle("Oops...");
-			// model.addObject("result", rbean);
-			// if(req.getHeader("User-Agent").contains("Mobile")){
-			// model.setViewName("AMobilelogin");
-			// }else{
-			// model.setViewName("Alogin");
-			// }
-			
-//		SimpleDateFormat dateFormater = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-//		SimpleDateFormat loginFormater = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-//		StringBuilder sb = new StringBuilder();
 
-		// if(user!=null)
-		// {
-		// String userString = new Gson().toJson(user);
-		// JSONObject jo = new JSONObject();
-		// try {
-		// jo = new JSONObject(userString);
-		// } catch (JSONException e) {
-		// // TODO Auto-generated catch block
-		// e.printStackTrace();
-		// }
-
-		// if(usersession != null){
-		// if(!usersession.getUserid().equalsIgnoreCase(user.getUserid())){
-		// rbean.setMessage("Someone Is Already Loggedin");
-		// rbean.setType("error");
-		// rbean.setTitle("Oops...");
-		// model.addObject("result", rbean);
-		// if(req.getHeader("User-Agent").contains("Mobile")){
-		// model.setViewName("AMobilelogin");
-		// }else{
-		// model.setViewName("Alogin");
-		// }
-		// return model;
-		// }
-		// }
-		// if(user.getUsertype() == 6){
-		// rbean.setMessage("Not Allowed to login");
-		// rbean.setType("error");
-		// rbean.setTitle("Oops...");
-		// model.addObject("result", rbean);
-		// if(req.getHeader("User-Agent").contains("Mobile")){
-		// model.setViewName("AMobilelogin");
-		// }else{
-		// model.setViewName("Alogin");
-		// }
-		// }
-		// else
-		// {
-		// if(user.getAccountLock()){
-		// rbean.setMessage("Account Locked Please contact to Admin!");
-		// rbean.setType("error");
-		// rbean.setTitle("Oops...");
-		// model.addObject("result", rbean);
-		// if(req.getHeader("User-Agent").contains("Mobile")){
-		// model.setViewName("AMobilelogin");
-		// }else{
-		// model.setViewName("Alogin");
-		// }
-		// }else{
-		// try {
-		//
-		// firebaseDatabase = FirebaseDatabase.getInstance();
-		//
-		// } catch (Exception ex) {
-		// ex.printStackTrace();
-		// }
-		//
-		//
-		// session.setAttribute("user",user);
-		// session.setAttribute("userJson",jo);
-		// model.setViewName("Adminhome");
-		// UserIp userip = new UserIp();
-		// if(session.getAttribute("user")!=null){
-		// DatabaseReference databaseReference =
-		// firebaseDatabase.getReference(EXConstants.Login_Point+""+user.getUserid());
-		// databaseReference.child("sessionid").setValueAsync(session.getId());
-		// databaseReference.child("ipAddress").setValueAsync(ipDao.getClientIp(request));
-		// if(userIpRepo.findByuserid(user.getId())!=null){
-		// userip = userIpRepo.findByuserid(user.getId());
-		//
-		// userip.setIpdetail(session.getId());
-		// userip.setIpaddress(ipDao.getClientIp(request));
-		//
-		// userip.setLoggedin(true);
-		// userip.setLastlogin(dtUtil.convTimeZone2(dateFormater.format(new Date()),
-		// timeZone.getID(), "GMT"));
-		// }else{
-		// userip.setIpdetail(session.getId());
-		// userip.setIpaddress(ipDao.getClientIp(request));
-		// userip.setLoggedin(false);
-		// userip.setUserid(user.getId());
-		// userip.setLastlogin(dtUtil.convTimeZone2(dateFormater.format(new Date()),
-		// timeZone.getID(), "GMT"));
-		// }
-		// UserActivityLog activityLog = new UserActivityLog();
-		// activityLog.setActivityType(EXConstants.Login_Log);
-		// activityLog.setIpaddress(ipDao.getClientIp(request));
-		// activityLog.setUserid(user.getUserid());
-		// activityLog.setCreatedOn(new Date());
-		// activityLog.setNarration("-");
-		// activityLog.setCity("-");
-		// activityLog.setCountry("-");
-		// activityLog.setActivityOn(activityFormater.format(new Date()));
-		// if(request.getHeader("User-Agent").contains("Mobi")) {
-		// activityLog.setIsMobile(true);
-		// }else {
-		// activityLog.setIsMobile(false);
-		// }
-		// userActivityRepo.save(activityLog);
-		// if(userIpRepo.save(userip)==null){
-		// session.removeAttribute("user");
-		// rbean.setMessage("Something Went Wrong");
-		// rbean.setType("error");
-		// rbean.setTitle("Oops...");
-		// model.addObject("result", rbean);
-		// if(req.getHeader("User-Agent").contains("Mobile")){
-		// model.setViewName("AMobilelogin");
-		// }else{
-		// model.setViewName("Alogin");
-		// }
-		// return model;
-		// }
-		// }
-		// }
-		//
-		// }
-		// }
-		// else
-		// {
-		// rbean.setMessage("Invalid Login id or password!");
-		// rbean.setType("error");
-		// rbean.setTitle("Oops...");
-		// model.addObject("result", rbean);
-		// if(req.getHeader("User-Agent").contains("Mobile")){
-		// model.setViewName("AMobilelogin");
-		// }else{
-		// model.setViewName("Alogin");
-		// }
-		// }
-	
 	
 	
 	@PostMapping("/checkuser")

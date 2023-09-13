@@ -28,6 +28,8 @@ public class EXUser {
 	private String lastName;
 		 
 	private String userid;
+	
+	private String sessionId;
  
 	private String password;
 	
