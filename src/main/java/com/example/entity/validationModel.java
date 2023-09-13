@@ -12,7 +12,7 @@ public class validationModel {
 	private String id;
 	private String userid;
 	private Integer usertype;
-	private String websitename;
+	private String websiteName;
 	private String password;
 	private String email;
 	private String firstName;
