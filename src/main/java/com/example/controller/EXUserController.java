@@ -346,8 +346,8 @@ public class EXUserController {
 			child.setMasterId("0");
 			child.setMasterName("0");
 			child.setMasterUserId("0");
-			child.setMyBalance(1000.0);
-			child.setFixLimit(1000.0);
+			child.setMyBalance(0.0);
+			child.setFixLimit(0.0);
 			child.setMyallPl(0.0);
 			child.setMysportPl(0.0);
 			child.setMycasinoPl(0.0);
