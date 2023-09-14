@@ -262,7 +262,7 @@ public class EXUserController {
 				}
 			}else if(((EXUser) childData).getUsertype() == 2){
 				EXUser saveSuperSuper = saveSuperSuper(childData);
-				if(checkUser.getUserid()!=null){
+				if(childData.getUserid()!=null){
 					userRepo.save(saveSuperSuper);
 					responseBean.setData("success");
 					responseBean.setMessage("Success");
@@ -271,7 +271,7 @@ public class EXUserController {
 				}
 			}else if(((EXUser) childData).getUsertype() == 3){
 				EXUser saveSuperMaster = saveSuperMaster(childData);
-				if(checkUser.getUserid()!=null){
+				if(childData.getUserid()!=null){
 					userRepo.save(saveSuperMaster);
 					responseBean.setData("success");
 					responseBean.setMessage("Success");
@@ -280,7 +280,7 @@ public class EXUserController {
 				}
 			}else if(((EXUser) childData).getUsertype() == 4){
 				EXUser saveMaster = saveMaster(childData);
-				if(checkUser.getUserid()!=null){
+				if(childData.getUserid()!=null){
 					userRepo.save(saveMaster);
 					responseBean.setData("success");
 					responseBean.setMessage("Success");
@@ -289,7 +289,7 @@ public class EXUserController {
 				}
 			}else if(((EXUser) childData).getUsertype() == 5){
 				EXUser saveUser = saveUser(childData);
-				if(checkUser.getUserid()!=null){
+				if(childData.getUserid()!=null){
 					userRepo.save(saveUser);
 					responseBean.setData("success");
 					responseBean.setMessage("Success");
