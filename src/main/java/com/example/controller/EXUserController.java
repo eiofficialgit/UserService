@@ -1719,6 +1719,45 @@ public class EXUserController {
 	        return new ResponseEntity<>("Error occurred.", HttpStatus.INTERNAL_SERVER_ERROR);
 	    }
 	}
+	    
+	    @GetMapping("/getsportid/{sportid}")
+        public List<Match> getMatchesBySportId(@PathVariable String sportid) {
+        	
+            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+            String todayDate = dateFormat.format(new Date());
+            
+            List<Match> matches = matchRepo.findByOpenDateGreaterThanEqual(todayDate);
+
+            if (sportid != null) {
+                List<Match> sportMatches = matchRepo.findBySportId(sportid);
+
+                if (!matches.isEmpty()) {
+                    matches.retainAll(sportMatches);
+                } else {
+                    matches = sportMatches;
+                }
+            }
+
+            return matches;
+        }
+   
+        @GetMapping("/getByCompetitionName/{competitionname}")
+        public List<Match> getByCompetitionNames(@PathVariable String competitionname) {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+            String todayDate = dateFormat.format(new Date());
+            List<Match> matches = matchRepo.findByOpenDateGreaterThanEqual(todayDate);
+            
+            if (competitionname != null) {
+                List<Match> competitionMatches = matchRepo.findByCompetitionName(competitionname);
+
+                if (!matches.isEmpty()) {
+                    matches.retainAll(competitionMatches);
+                } else {
+                    matches = competitionMatches;
+                }
+            }
+            return matches;
+	}
 	
 
 	

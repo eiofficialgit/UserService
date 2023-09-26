@@ -25,6 +25,8 @@ public interface MatchRepo extends MongoRepository<Match, String> {
 
 	boolean existsByEventId(String eventId);
 
+	List<Match> findByCompetitionName(String competitionname);
+
 	
 
 }
