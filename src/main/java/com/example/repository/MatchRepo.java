@@ -1,5 +1,6 @@
 package com.example.repository;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -15,6 +16,14 @@ public interface MatchRepo extends MongoRepository<Match, String> {
 	Match findBymarketId(String marketId);
 
 	List<Match> findBySportId(String sportid);
+
+	List<Match> findBycompetitionId(String competitionId);
+
+	List<Match> findByeventId(String eventId);
+
+	List<Match> findByOpenDateGreaterThanEqualOrderByOpenDate(String todayDate);
+
+	boolean existsByEventId(String eventId);
 
 	
 

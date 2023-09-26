@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -21,6 +22,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -1647,45 +1650,75 @@ public class EXUserController {
 		    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		}
 	}
-	
-
-	
-	@GetMapping("/currentMatches")
-    public List<Match> getTodayAndUpcomingMatches() {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
-        String date = dateFormat.format(new Date());
-		List<Match> matches = matchRepo.findByOpenDateGreaterThanEqual(date);
-		List<Match> activeMatches = matches.stream().filter(match -> match.isActive).collect(Collectors.toList());
-	    return activeMatches;
-				
-    }
 	    
 	
-	@GetMapping("/getsportid/{sportid}")
-    public List<Match> getMatchesBySportId(@PathVariable String sportid) {
-    	
-        SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
-        String todayDate = dateFormat.format(new Date());
+	
+	@PostMapping("/match")
+	public List<Match> getMatch(@RequestBody Match match){
+		
+		String competitionId = match.getCompetitionId();
+		String eventId = match.getEventId();
+		if(competitionId!=null && eventId==null) {
+			List<Match> competitionList = matchRepo.findBycompetitionId(competitionId);
+			return competitionList;
+		}else if(competitionId==null && eventId!=null){
+			List<Match> eventList = matchRepo.findByeventId(eventId);
+			return eventList;
+		}
+		return null;
+	}
+	
+	
+	@GetMapping("/getMatchList")
+	public ResponseEntity<Object> getMatchList(
+	        @RequestParam(required = false) Integer sportId,
+	        @RequestParam(required = false) Boolean isActive) {
+	    try {
+	        HttpHeaders headers = new HttpHeaders();
+	        headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
+	        HttpEntity<String> entity = new HttpEntity<>(headers);
+	        RestTemplate restTemplate = new RestTemplate();  
+	        String apiUrl = "https://data.mainredis.in/api/match/getMatches?isActive=true&isResult=false&type=own";
 
-        List<Match> matches = matchRepo.findByOpenDateGreaterThanEqual(todayDate);
+	        if (sportId != null && sportId > 0) {
+	            apiUrl += "&sportId=" + sportId;
+	        }
 
-        if (sportid != null) {
-            List<Match> sportMatches = matchRepo.findBySportId(sportid);
 
-            if (!matches.isEmpty()) {
-                matches.retainAll(sportMatches);
-            } else {
-                matches = sportMatches;
-            }
-        }
+	        ResponseEntity<String> responseEntity = restTemplate.exchange( 
+	                apiUrl,
+	                HttpMethod.GET,
+	                entity,
+	                String.class
+	        );
 
-        return matches;
-    }   
-	
-	
-	
-	
-	
+	        String response = responseEntity.getBody();
+	        ObjectMapper objectMapper = new ObjectMapper();
+	        JsonNode root = objectMapper.readTree(response);
+
+	        JsonNode events = root.get("result");
+
+	        JSONArray sportArray = new JSONArray();
+
+	        for (JsonNode eventNode : events) {
+	            JSONObject event = new JSONObject(eventNode.toString());
+	            String eventId = event.getString("eventId");
+	            event.put("isAdded", matchRepo.existsByEventId(eventId));
+	            JSONObject fineEvent = new JSONObject();
+	            fineEvent.put("results", event);
+  
+	            int sportId1 = event.getInt("sportId"); 
+	            if ((sportId == null && sportId1 > 0) || (sportId != null && sportId1 == sportId)) {
+	                sportArray.put(fineEvent);
+	            }
+	        }
+
+	        return new ResponseEntity<>(sportArray.toString(), HttpStatus.OK);
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return new ResponseEntity<>("Error occurred.", HttpStatus.INTERNAL_SERVER_ERROR);
+	    }
+	}
 	
 
 	
