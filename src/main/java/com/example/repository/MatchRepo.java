@@ -8,8 +8,14 @@ import com.example.entity.Match;
 
 public interface MatchRepo extends MongoRepository<Match, String> {
 
-	Match findByeventId(String eventId);
-
 	List<Match> findByisActive(boolean isActive);
+
+	List<Match> findByOpenDateGreaterThanEqual(String date);
+
+	Match findBymarketId(String marketId);
+
+	List<Match> findBySportId(String sportid);
+
+	
 
 }

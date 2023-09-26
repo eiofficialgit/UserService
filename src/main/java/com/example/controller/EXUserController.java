@@ -3,13 +3,18 @@ package com.example.controller;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,12 +30,16 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -81,6 +90,7 @@ import jakarta.servlet.http.HttpSession;
 @RestController
 @CrossOrigin("*")
 @RequestMapping("/exuser")
+@EnableScheduling
 public class EXUserController {
 
 	@Autowired
@@ -851,11 +861,6 @@ public class EXUserController {
 	    log.setIpAddress(httpServletRequest.getRemoteAddr());
 	    log.setLoginStatus("Login--");
 	    activityLogRepo.save(log);
-	    
-	    String sessionId = httpSession.getId();
-	    String redisKey = "session_Id:" + sessionId;		
-	    redisTemplate.opsForValue().set(redisKey, sessionId);
-	    
 		
 		String  encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
 		HttpEntity<EXUser> userRequestEntity = new HttpEntity<>(users, headers);
@@ -865,28 +870,7 @@ public class EXUserController {
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	}
 	
-	@GetMapping("/checkSession")
-	public ResponseEntity<ResponseBean> checkSession() {
-		    EXUser parent = (EXUser) httpSession.getAttribute("EXUser");    
-		
-	        String userId = parent.getSessionId();
-	        String sessionId = httpSession.getId();
-	        String redisKey = "session_Id:" + sessionId;
-	        String storedSessionId = redisTemplate.opsForValue().get(redisKey);
-
-	        if (userId.equals(storedSessionId)) {
-	            ResponseBean responseBean = ResponseBean.builder().data("Session is valid").status("success").build();
-	            return new ResponseEntity<>(responseBean, HttpStatus.OK);
-	        } else {
-	            httpSession.invalidate();
-	            ResponseBean responseBean = ResponseBean.builder().data("Session mismatch, user logged out").status("error").build();
-	            return new ResponseEntity<>(responseBean, HttpStatus.UNAUTHORIZED);
-	        }
-	    
-	}
-
 	
-
 	
 	
 	@PostMapping("/checkuser")
@@ -1217,6 +1201,8 @@ public class EXUserController {
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	
 	}
+	
+	
 	
 	
 
@@ -1559,6 +1545,8 @@ public class EXUserController {
 	    return ResponseEntity.ok(new ResponseBean("Success", "HyperMessage Deleted Successfully!!", "HyperMessage"));
 	}
 	
+	
+	@Scheduled(fixedRate = 900000)
 	@GetMapping("/allMatches")
     public JsonNode allMatches() {
         Request request = new Request.Builder()
@@ -1569,6 +1557,20 @@ public class EXUserController {
         try (Response response = httpClient.newCall(request).execute()) {
             if (response.isSuccessful()) {
                 JsonNode responseBody = objectMapper.readTree(response.body().string());
+                
+                JsonNode results = responseBody.get("result");
+                
+                List<Match> matchesToSave = new ArrayList<>();
+                for (JsonNode matchNode : results) {
+                	Match match = objectMapper.treeToValue(matchNode, Match.class);
+                	Match findByeventId = matchRepo.findBymarketId(match.getMarketId());
+            		if(findByeventId == null) {
+                    match.setisActive(true);
+                    matchesToSave.add(match);
+                }  
+                }
+                matchRepo.saveAll(matchesToSave);
+                              
                 return responseBody;
             } else {
                 return objectMapper.createObjectNode().put("error", "HTTP error: " + response.code());
@@ -1579,42 +1581,113 @@ public class EXUserController {
         }
     }
 	
-	@PostMapping("/saveMatch")
-	public ResponseEntity<ResponseBean> saveMatch(@RequestBody Match match) {
-		Match findByeventId = matchRepo.findByeventId(match.getEventId());
-		if(findByeventId == null) {
-			match.setActive(true);
-			matchRepo.save(match);
-		    ResponseBean reponsebean=ResponseBean.builder().data("MatchEntity").status("success").message("Match Addedd Successfully!!").build();
-		    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
-		}
-		else {
-		    ResponseBean reponsebean=ResponseBean.builder().data("MatchEntity").status("error").message("Match Already Exist!!").build();
-		    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
-		}
+	
+	@Scheduled(fixedRate = 900000)
+	@GetMapping("/statusCheck")
+    public ResponseEntity<Object> statusCheck() {
+		 try {
+	         List<Match> matchList = matchRepo.findByisActive(true); 
+
+	         ObjectMapper objectMapper = new ObjectMapper();  
+	         
+	         List<Match> matchesToSave = new ArrayList<>();
+
+	         for (Match match : matchList) {
+	             String apiUrl = "https://scoreapi.365cric.com/api/match/getResult?mktid="+match.getMarketId();
+	             HttpHeaders headers = new HttpHeaders();
+	             headers.setAccept(List.of(MediaType.APPLICATION_JSON));   
+	             HttpEntity<String> entity = new HttpEntity<>(headers);
+	             RestTemplate restTemplate = new RestTemplate();
+	             ResponseEntity<String> responseEntity = restTemplate.exchange( apiUrl,HttpMethod.GET,entity,String.class);
+	             String response = responseEntity.getBody();
+
+	             if (response != null) {
+	                 JsonNode jsonResponse = objectMapper.readTree(response);      
+
+	                 if (jsonResponse.isArray()) {
+	                     for (JsonNode matchNode : jsonResponse) {
+	                         if (matchNode.has("status") && matchNode.get("status").asText().equals("CLOSED")) {
+	                             match.setisActive(false);
+	                             match.setisResult(true);
+	                             matchesToSave.add(match);  
+	                         }
+	                         matchRepo.saveAll(matchesToSave);
+	                     }
+	                 }
+	             }
+	         }
+
+	         return new ResponseEntity<Object>(HttpStatus.OK);
+	     } catch (Exception e) {
+	         e.printStackTrace();
+	         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error occurred.");
+	     }
     }
 	
-	@GetMapping("/allSaveMatches/{isActive}")
+	
+	@GetMapping("/allSaveMatches")
 	public List<Match> allSaveMatches(@PathVariable boolean isActive) {
-		 List<Match> findAll = matchRepo.findByisActive(isActive);
+		 List<Match> findAll = matchRepo.findByisActive(true);
 		 return findAll;
 	}
 	
+	
 	@PostMapping("/activeInactiveMatches")
 	public ResponseEntity<ResponseBean> allSaveMatches(@RequestBody Match match) {
-		Match findByeventId = matchRepo.findByeventId(match.getEventId());
+		Match findByeventId = matchRepo.findBymarketId(match.getMarketId());
 		if(match.isActive()) {
-		findByeventId.setActive(true);
+		findByeventId.setisActive(true);
 		matchRepo.save(findByeventId);
 		ResponseBean reponsebean=ResponseBean.builder().data("MatchEntity").status("success").message(findByeventId.getEventName() +" Active Successfully!!").build();
 	    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		}else {
-			findByeventId.setActive(false);
+			findByeventId.setisActive(false);
 			matchRepo.save(findByeventId);
 			ResponseBean reponsebean=ResponseBean.builder().data("MatchEntity").status("success").message(findByeventId.getEventName() +" Inactive Successfully!!").build();
 		    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		}
 	}
+	
+
+	
+	@GetMapping("/currentMatches")
+    public List<Match> getTodayAndUpcomingMatches() {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+        String date = dateFormat.format(new Date());
+		List<Match> matches = matchRepo.findByOpenDateGreaterThanEqual(date);
+		List<Match> activeMatches = matches.stream().filter(match -> match.isActive).collect(Collectors.toList());
+	    return activeMatches;
+				
+    }
+	    
+	
+	@GetMapping("/getsportid/{sportid}")
+    public List<Match> getMatchesBySportId(@PathVariable String sportid) {
+    	
+        SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+        String todayDate = dateFormat.format(new Date());
+
+        List<Match> matches = matchRepo.findByOpenDateGreaterThanEqual(todayDate);
+
+        if (sportid != null) {
+            List<Match> sportMatches = matchRepo.findBySportId(sportid);
+
+            if (!matches.isEmpty()) {
+                matches.retainAll(sportMatches);
+            } else {
+                matches = sportMatches;
+            }
+        }
+
+        return matches;
+    }   
+	
+	
+	
+	
+	
+	
+
 	
 	
 }
