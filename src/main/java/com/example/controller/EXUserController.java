@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
@@ -1759,6 +1760,22 @@ public class EXUserController {
             return matches;
 	}
 	
+        @GetMapping("/{sportid}")
+        public List<Match> getMatches(@PathVariable String sportid) {
+        	List<Match> findAll = matchRepo.findBySportId(sportid);
+        	 Map<String, Match> uniqueCompetitionsByName = findAll.stream().collect(Collectors.toMap(Match::getCompetitionName, c -> c, (existing, replacement) -> existing));
+        	 List<Match> collect = uniqueCompetitionsByName.values().stream().collect(Collectors.toList());
+        	 return collect;
+        }
+        
+        
+        @GetMapping("/GetCurrentDateAndUpcomingDate")
+        public List<Match> getCurrentAndUpcomingMatches() {
+        	SimpleDateFormat currentDate = new SimpleDateFormat("MM/DD/YYYY"); 
+			String todayDate = currentDate.format(new Date());
+            List<Match> matches = matchRepo.findByOpenDateGreaterThanEqual(todayDate);
+            return matches;
+        }
 
 	
 	
