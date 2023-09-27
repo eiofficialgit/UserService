@@ -1756,18 +1756,11 @@ public class EXUserController {
                 } else {
                     matches = competitionMatches;
                 }
-            }
+            } 
+            
             return matches;
 	}
 	
-        @GetMapping("/{sportid}")
-        public List<Match> getMatches(@PathVariable String sportid) {
-        	List<Match> findAll = matchRepo.findBySportId(sportid);
-        	 Map<String, Match> uniqueCompetitionsByName = findAll.stream().collect(Collectors.toMap(Match::getCompetitionName, c -> c, (existing, replacement) -> existing));
-        	 List<Match> collect = uniqueCompetitionsByName.values().stream().collect(Collectors.toList());
-        	 return collect;
-        }
-        
         
         
         
