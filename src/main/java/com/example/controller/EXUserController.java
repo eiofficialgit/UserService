@@ -1769,14 +1769,6 @@ public class EXUserController {
         }
         
         
-        @GetMapping("/GetCurrentDateAndUpcomingDate")
-        public List<Match> getCurrentAndUpcomingMatches() {
-        	SimpleDateFormat currentDate = new SimpleDateFormat("MM/DD/YYYY"); 
-			String todayDate = currentDate.format(new Date());
-            List<Match> matches = matchRepo.findByOpenDateGreaterThanEqual(todayDate);
-            return matches;
-        }
-
 	
 	
 }
