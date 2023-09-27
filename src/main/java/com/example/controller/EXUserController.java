@@ -1777,12 +1777,7 @@ public class EXUserController {
             return matches;
         }
         
-        @GetMapping("/competitionList/{sportid}")
-        public List<String> getMatchesList(@PathVariable String sportid) {
-        	List<Match> findAll = matchRepo.findBySportId(sportid);
-        	 List<String> uniqueCompetitionNames = findAll.stream().map(Match::getCompetitionName).distinct().collect(Collectors.toList());
-        	 return uniqueCompetitionNames;
-        }
+        
 
 	
 	
