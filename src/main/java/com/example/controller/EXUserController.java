@@ -1769,6 +1769,21 @@ public class EXUserController {
         }
         
         
+        @GetMapping("/GetCurrentDateAndUpcomingDate")
+        public List<Match> getCurrentAndUpcomingMatches() {
+        	SimpleDateFormat currentDate = new SimpleDateFormat("MM/DD/YYYY"); 
+			String todayDate = currentDate.format(new Date());
+            List<Match> matches = matchRepo.findByOpenDateGreaterThanEqual(todayDate);
+            return matches;
+        }
+        
+        @GetMapping("/competitionList/{sportid}")
+        public List<String> getMatchesList(@PathVariable String sportid) {
+        	List<Match> findAll = matchRepo.findBySportId(sportid);
+        	 List<String> uniqueCompetitionNames = findAll.stream().map(Match::getCompetitionName).distinct().collect(Collectors.toList());
+        	 return uniqueCompetitionNames;
+        }
+
 	
 	
 }
