@@ -32,6 +32,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -1721,26 +1722,26 @@ public class EXUserController {
 	    }
 	}
 	    
-	    @GetMapping("/getsportid/{sportid}")
-        public List<Match> getMatchesBySportId(@PathVariable String sportid) {
-        	
-            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
-            String todayDate = dateFormat.format(new Date());
-            
-            List<Match> matches = matchRepo.findByOpenDateGreaterThanEqual(todayDate);
+	@GetMapping("/getsportid/{sportid}")
+	public List<Match> getMatchesBySportId(@PathVariable String sportid) {
+	    SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss a");
+	    String todayDate = dateFormat.format(new Date());
+	    Sort sort = Sort.by(Sort.Direction.ASC, "openDate");
+	    List<Match> matches = matchRepo.findByOpenDateAfterOrderByOpenDateAsc(todayDate, sort);
 
-            if (sportid != null) {
-                List<Match> sportMatches = matchRepo.findBySportId(sportid);
+	    if (sportid != null) {
+	        List<Match> sportMatches = matchRepo.findBySportIdAndIsActive(sportid, true);
 
-                if (!matches.isEmpty()) {
-                    matches.retainAll(sportMatches);
-                } else {
-                    matches = sportMatches;
-                }
-            }
+	        if (!matches.isEmpty()) {
+	            matches.retainAll(sportMatches);
+	        } else {
+	            matches = sportMatches;
+	        }
+	    }
 
-            return matches;
-        }
+	    return matches;
+	}
+	
    
         @GetMapping("/getByCompetitionName/{competitionname}")
         public List<Match> getByCompetitionNames(@PathVariable String competitionname) {
@@ -1761,7 +1762,6 @@ public class EXUserController {
             return matches;
 	}
 	
-        
         
         
         @GetMapping("/competitionList/{sportid}")
