@@ -1724,7 +1724,8 @@ public class EXUserController {
 	    
 	@GetMapping("/getsportid/{sportid}")
 	public List<Match> getMatchesBySportId(@PathVariable String sportid) {
-	    SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss a");
+        //SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss a");
+	    SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
 	    String todayDate = dateFormat.format(new Date());
 	    Sort sort = Sort.by(Sort.Direction.ASC, "openDate");
 	    List<Match> matches = matchRepo.findByOpenDateAfterOrderByOpenDateAsc(todayDate, sort);
