@@ -12,17 +12,21 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-
+import org.springframework.data.domain.Sort;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +42,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
@@ -52,8 +57,10 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.entity.ActivityLog;
 import com.example.entity.ActivityLogResponse;
@@ -62,26 +69,35 @@ import com.example.entity.CreditReferenceLogResponse;
 import com.example.entity.DecryptResponse;
 import com.example.entity.DepositWithdraw;
 import com.example.entity.EXUser;
+import com.example.entity.EXUserData;
 import com.example.entity.EXUserResponse;
 import com.example.entity.EncodedPayload;
 import com.example.entity.HyperMessage;
+import com.example.entity.ImageData;
 import com.example.entity.ImportantMessage;
 import com.example.entity.Match;
+import com.example.entity.MatchClose;
 import com.example.entity.Partnership;
 import com.example.entity.ResponseBean;
+import com.example.entity.Runners;
 import com.example.entity.TransactionHistory;
 import com.example.entity.TransactionHistoryResponse;
 import com.example.entity.UserStake;
 import com.example.entity.WebsiteBean;
+import com.example.entity.odds;
 import com.example.repository.ActivityLogRepo;
 import com.example.repository.Authenticaterepo;
 import com.example.repository.CreditReferenceLogRepo;
+import com.example.repository.EXUserDataRepo;
 import com.example.repository.EXUserRepository;
 import com.example.repository.HyperMessageRepo;
 import com.example.repository.ImportantMessageRepo;
+import com.example.repository.MatchCloseRepo;
 import com.example.repository.MatchRepo;
+import com.example.repository.StorageRepo;
 import com.example.repository.TransactionHistoryRepo;
 import com.example.repository.WebsiteBeanRepository;
+import com.example.service.ImageUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -131,6 +147,15 @@ public class EXUserController {
 	
 	@Autowired
 	private CreditReferenceLogRepo creditReferenceLogRepo;
+	
+	@Autowired
+	private MatchCloseRepo matchCloseRepo;
+	
+	@Autowired
+	private EXUserDataRepo exUserDataRepo;
+	
+	@Autowired
+	private StorageRepo storageRepo;
 	
 	
 
@@ -816,9 +841,6 @@ public class EXUserController {
 	}
 
 
-	@Autowired
-    private RedisTemplate<String, String> redisTemplate;
-	
 	
 
 	@PostMapping("/managementHome")
@@ -835,7 +857,17 @@ public class EXUserController {
 		user.setSessionId(httpSession.getId());
 		authenticaterepo.save(user);
 		
-		//user name null or wrong
+		EXUserData findByUserid = exUserDataRepo.findByUserid(decryptData.getUserid());
+		EXUserData data = new EXUserData();
+		if(findByUserid==null) {
+			data.setIpAddress(httpServletRequest.getRemoteAddr());
+			data.setUserid(decryptData.getUserid());
+			exUserDataRepo.save(data);
+			}else if(!findByUserid.getIpAddress().equals(httpServletRequest.getRemoteAddr())) {
+				ResponseBean reponsebean=ResponseBean.builder().data("ManagementHome").status("Error").message("User Not Authorized!!!").build();
+				return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.UNAUTHORIZED);
+			}
+		
 		if(user==null) {
 			ResponseBean reponsebean=ResponseBean.builder().data("ManagementHome").status("Error").message("Wrong UserId!!!").build();
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.UNAUTHORIZED);
@@ -1451,7 +1483,7 @@ public class EXUserController {
 		
 		String decryptUrl = "http://ENCRYPTDECRYPT-MS/api/decryptPayload";
 		HttpHeaders headers = new HttpHeaders();
-	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    headers.setContentType(MediaType.APPLICATION_JSON);        
 	    HttpEntity<EncodedPayload> requestEntity = new HttpEntity<>(payload, headers);
 	    EXUser decryptData = restTemplate.postForObject(decryptUrl, requestEntity, EXUser.class);
 		
@@ -1566,9 +1598,9 @@ public class EXUserController {
                 List<Match> matchesToSave = new ArrayList<>();
                 for (JsonNode matchNode : results) {
                 	Match match = objectMapper.treeToValue(matchNode, Match.class);
-                	Match findByeventId = matchRepo.findBymarketId(match.getMarketId());
+                	Match findByeventId = matchRepo.findByMarketId(match.getMarketId());
             		if(findByeventId == null) {
-                    match.setisActive(true);
+            		match.setActive(true);
                     matchesToSave.add(match);
                 }  
                 }
@@ -1587,45 +1619,71 @@ public class EXUserController {
 	
 	@Scheduled(fixedRate = 900000)
 	@GetMapping("/statusCheck")
-    public ResponseEntity<Object> statusCheck() {
-		 try {
-	         List<Match> matchList = matchRepo.findByisActive(true); 
+	public ResponseEntity<Object> statusCheck() {
+	    try {
+	        List<Match> matchList = matchRepo.findByisActive(true);
 
-	         ObjectMapper objectMapper = new ObjectMapper();  
-	         
-	         List<Match> matchesToSave = new ArrayList<>();
+	        ObjectMapper objectMapper = new ObjectMapper();
 
-	         for (Match match : matchList) {
-	             String apiUrl = "https://scoreapi.365cric.com/api/match/getResult?mktid="+match.getMarketId();
-	             HttpHeaders headers = new HttpHeaders();
-	             headers.setAccept(List.of(MediaType.APPLICATION_JSON));   
-	             HttpEntity<String> entity = new HttpEntity<>(headers);
-	             RestTemplate restTemplate = new RestTemplate();
-	             ResponseEntity<String> responseEntity = restTemplate.exchange( apiUrl,HttpMethod.GET,entity,String.class);
-	             String response = responseEntity.getBody();
+	        List<Match> matchesToSave = new ArrayList<>();
+	        List<MatchClose> matchCloseToSave = new ArrayList<>();
 
-	             if (response != null) {
-	                 JsonNode jsonResponse = objectMapper.readTree(response);      
+	        for (Match match : matchList) {
+	            String apiUrl = "https://scoreapi.365cric.com/api/match/getResult?mktid=" + match.getMarketId();
+	            HttpHeaders headers = new HttpHeaders();
+	            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+	            HttpEntity<String> entity = new HttpEntity<>(headers);
+	            RestTemplate restTemplate = new RestTemplate();
+	            ResponseEntity<String> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.GET, entity, String.class);
+	            String response = responseEntity.getBody();
+	            if (response != null) {
+	                JsonNode jsonResponse = objectMapper.readTree(response);
 
-	                 if (jsonResponse.isArray()) {
-	                     for (JsonNode matchNode : jsonResponse) {
-	                         if (matchNode.has("status") && matchNode.get("status").asText().equals("CLOSED")) {
-	                             match.setisActive(false);
-	                             match.setisResult(true);
-	                             matchesToSave.add(match);  
-	                         }
-	                         matchRepo.saveAll(matchesToSave);
-	                     }
-	                 }
-	             }
-	         }
+	                if (jsonResponse.isArray()) {
+	                    for (JsonNode matchNode : jsonResponse) {
+	                        if (matchNode.has("status") && matchNode.get("status").asText().equals("CLOSED")) {
+	                        	match.setActive(false);
+	                             match.setResult(true);
+	                            matchesToSave.add(match);
+	                            MatchClose matchClose = new MatchClose();
+	                            matchClose.setMarketid(match.getEventId());
+	                            matchClose.setMarketname(match.getMarketName());
+	                            matchClose.setSportid(match.getSportId());
+	                            matchClose.setSportname(match.getSportName());
+	                            matchClose.setMatchid(match.getEventId());
+	                            matchClose.setMatchname(match.getEventName());
+	                            matchClose.setEventDateTime(match.getOpenDate());
+	                            matchClose.setResultIP("AutoMatic");	                            matchClose.setStatus(true);
+	                            if (matchNode.has("runners") && matchNode.get("runners").isArray()) {
+	                                for (JsonNode runnerNode : matchNode.get("runners")) {
+	                                	if (runnerNode.has("status") && runnerNode.get("status").asText().equals("WINNER")) {
+	                                		int winnerSelectionId = runnerNode.get("selectionId").asInt();
+	                                		for (Runners runner : match.getMatchRunners()) {
+	                                            if (runner.getSelectionId() == winnerSelectionId) {
+	                                                matchClose.setSelectionid(runner.getSelectionId());	 
+	                                                matchClose.setSelectionname(runner.getName());
+	                                                break; 
+	                                            }
+	                                        }
+	                                    }
+	                                }
+	                            }
+	                            matchCloseToSave.add(matchClose);
+	                        }
+	                    }
+	                }
+	            }
+	        }
+	        matchCloseRepo.saveAll(matchCloseToSave);
+	        matchRepo.saveAll(matchesToSave);
 
-	         return new ResponseEntity<Object>(HttpStatus.OK);
-	     } catch (Exception e) {
-	         e.printStackTrace();
-	         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error occurred.");
-	     }
-    }
+	        return new ResponseEntity<>(HttpStatus.OK);
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error occurred.");
+	    }
+	}
+
 	
 	
 	@GetMapping("/allSaveMatches")
@@ -1637,14 +1695,14 @@ public class EXUserController {
 	
 	@PostMapping("/activeInactiveMatches")
 	public ResponseEntity<ResponseBean> allSaveMatches(@RequestBody Match match) {
-		Match findByeventId = matchRepo.findBymarketId(match.getMarketId());
+		Match findByeventId = matchRepo.findByMarketId(match.getMarketId());
 		if(match.isActive()) {
-		findByeventId.setisActive(true);
+		findByeventId.setActive(true);
 		matchRepo.save(findByeventId);
 		ResponseBean reponsebean=ResponseBean.builder().data("MatchEntity").status("success").message(findByeventId.getEventName() +" Active Successfully!!").build();
 	    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		}else {
-			findByeventId.setisActive(false);
+			findByeventId.setActive(false);
 			matchRepo.save(findByeventId);
 			ResponseBean reponsebean=ResponseBean.builder().data("MatchEntity").status("success").message(findByeventId.getEventName() +" Inactive Successfully!!").build();
 		    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
@@ -1683,19 +1741,10 @@ public class EXUserController {
 	        if (sportId != null && sportId > 0) {
 	            apiUrl += "&sportId=" + sportId;
 	        }
-
-
-	        ResponseEntity<String> responseEntity = restTemplate.exchange( 
-	                apiUrl,
-	                HttpMethod.GET,
-	                entity,
-	                String.class
-	        );
-
+	        ResponseEntity<String> responseEntity = restTemplate.exchange(apiUrl,HttpMethod.GET,entity,String.class);
 	        String response = responseEntity.getBody();
 	        ObjectMapper objectMapper = new ObjectMapper();
 	        JsonNode root = objectMapper.readTree(response);
-
 	        JsonNode events = root.get("result");
 
 	        JSONArray sportArray = new JSONArray();
@@ -1720,26 +1769,28 @@ public class EXUserController {
 	    }
 	}
 	    
-	    @GetMapping("/getsportid/{sportid}")
-        public List<Match> getMatchesBySportId(@PathVariable String sportid) {
-        	
-            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
-            String todayDate = dateFormat.format(new Date());
-            
-            List<Match> matches = matchRepo.findByOpenDateGreaterThanEqual(todayDate);
+	
 
-            if (sportid != null) {
-                List<Match> sportMatches = matchRepo.findBySportId(sportid);
+	@GetMapping("/getsportid/{sportid}")
+	public List<Match> getMatchesBySportId(@PathVariable String sportid) {
+	    SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+	    String todayDate = dateFormat.format(new Date());
+	    Sort sort = Sort.by(Sort.Direction.ASC, "openDate");
+	    List<Match> matches = matchRepo.findByOpenDateAfterOrderByOpenDateAsc(todayDate, sort);
 
-                if (!matches.isEmpty()) {
-                    matches.retainAll(sportMatches);
-                } else {
-                    matches = sportMatches;
-                }
-            }
+	    if (sportid != null) {
+	        List<Match> sportMatches = matchRepo.findBySportIdAndIsActive(sportid, true);
 
-            return matches;
-        }
+	        if (!matches.isEmpty()) {
+	            matches.retainAll(sportMatches);
+	        } else {
+	            matches = sportMatches;
+	        }
+	    }
+
+	    return matches;
+	}
+	
    
         @GetMapping("/getByCompetitionName/{competitionname}")
         public List<Match> getByCompetitionNames(@PathVariable String competitionname) {
@@ -1755,11 +1806,203 @@ public class EXUserController {
                 } else {
                     matches = competitionMatches;
                 }
-            }
+            } 
+            
             return matches;
 	}
 	
+        
+        
+        @GetMapping("/competitionList/{sportid}")
+        public List<String> getMatchesList(@PathVariable String sportid) {
+        	List<Match> findAll = matchRepo.findBySportId(sportid);
+        	 List<String> uniqueCompetitionNames = findAll.stream().map(Match::getCompetitionName).distinct().collect(Collectors.toList());
+        	 return uniqueCompetitionNames;
+        }
+        
+        
+        
+        
+        @PostMapping("/updateOdds")
+        public ResponseEntity<String> createPost() throws JsonMappingException, JsonProcessingException {
+            List<Match> findAll = matchRepo.findByisActive(true);
 
-	
+            String apiUrl = "https://wonderbets.in/api/getOddsData";
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            ObjectMapper objectMapper = new ObjectMapper();
+
+            for (Match match : findAll) {
+                String marketId = match.getMarketId();
+                String postJson = "{\"marketIds\": \"" + marketId + "\"}";
+
+                HttpEntity<String> requestEntity = new HttpEntity<>(postJson, headers);
+                ResponseEntity<String> responseEntity = restTemplate.postForEntity(apiUrl, requestEntity, String.class);
+                String response = responseEntity.getBody();
+
+                if (response != null) {
+                    JsonNode jsonResponse = objectMapper.readTree(response);
+                    if (jsonResponse.has(marketId)) {
+                        JsonNode marketNode = jsonResponse.get(marketId);
+                        if (marketNode.has("tiger") && marketNode.get("tiger").isArray()) {
+                            JsonNode tigerArray = marketNode.get("tiger");
+                            for (JsonNode tigerItem : tigerArray) {
+                                if (tigerItem.has("runners") && tigerItem.get("runners").isArray()) {
+                                    JsonNode runnersArray = tigerItem.get("runners");
+                                    for (JsonNode runner : runnersArray) {
+                                        if (runner.has("ex")) {
+                                            JsonNode exArray = runner.get("ex");
+                                            if (exArray.has("availableToBack") && exArray.has("availableToLay")) {
+                                                JsonNode availableToBack = exArray.get("availableToBack");
+                                                JsonNode availableToLay = exArray.get("availableToLay");
+                                                if (availableToBack.isArray() && availableToLay.isArray() &&
+                                                    availableToBack.size() >= 3 && availableToLay.size() >= 3) {
+                                                    JsonNode firstBack = availableToBack.get(0);
+                                                    JsonNode secondBack = availableToBack.get(1);
+                                                    JsonNode thirdBack = availableToBack.get(2);
+                                                    JsonNode firstLay = availableToLay.get(0);
+                                                    JsonNode secondLay = availableToLay.get(1);
+                                                    JsonNode thirdLay = availableToLay.get(2);
+                                                    if (firstBack.has("price") && firstBack.has("size") &&
+                                                        secondBack.has("price") && secondBack.has("size") &&
+                                                        thirdBack.has("price") && thirdBack.has("size") &&
+                                                        firstLay.has("price") && firstLay.has("size") &&
+                                                        secondLay.has("price") && secondLay.has("size") &&
+                                                        thirdLay.has("price") && thirdLay.has("size")) {
+                                                        odds oddsData = new odds();
+                                                        oddsData.b1 = firstBack.get("price").asDouble();
+                                                        oddsData.b2 = secondBack.get("price").asDouble();
+                                                        oddsData.b3 = thirdBack.get("price").asDouble();
+                                                        oddsData.l1 = firstLay.get("price").asDouble();
+                                                        oddsData.l2 = secondLay.get("price").asDouble();
+                                                        oddsData.l3 = thirdLay.get("price").asDouble();
+
+                                                        if (match.getOdds() == null) {
+                                                            match.setOdds(new ArrayList<>());
+                                                        }
+                                                        if (match.getOdds().isEmpty()) {
+                                                            match.getOdds().add(oddsData);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            matchRepo.save(match);
+                        }
+                    }
+                }
+            }
+
+            return ResponseEntity.ok("Processed all marketIds.");
+        }
+
+        
+        
+        @PostMapping("/singleOdds")
+        public ResponseEntity<String> createPost(@RequestBody String postJson) throws JsonMappingException, JsonProcessingException {
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode jsonNode = objectMapper.readTree(postJson);
+
+            String marketIds = jsonNode.get("marketIds").asText();
+            Match match = matchRepo.findByMarketId(marketIds);
+
+            String apiUrl = "https://wonderbets.in/api/getOddsData";
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<String> requestEntity = new HttpEntity<>(postJson, headers);
+            ResponseEntity<String> responseEntity = restTemplate.postForEntity(apiUrl, requestEntity, String.class);
+            String response = responseEntity.getBody();
+
+            if (response != null) {
+                JsonNode jsonResponse = objectMapper.readTree(response);
+                if (jsonResponse.has(marketIds)) {
+                    JsonNode marketNode = jsonResponse.get(marketIds);
+                    if (marketNode.has("tiger") && marketNode.get("tiger").isArray()) {
+                        JsonNode tigerArray = marketNode.get("tiger");
+                        for (JsonNode tigerItem : tigerArray) {
+                            if (tigerItem.has("runners") && tigerItem.get("runners").isArray()) {
+                                JsonNode runnersArray = tigerItem.get("runners");
+                                for (JsonNode runner : runnersArray) {
+                                	if(runner.has("ex")) {
+                                		JsonNode exArray = runner.get("ex");
+                                		if (exArray.has("availableToBack") && exArray.has("availableToLay")) {
+                                	        JsonNode availableToBack = exArray.get("availableToBack");
+                                	        JsonNode availableToLay = exArray.get("availableToLay");
+                                	        if (availableToBack.isArray() && availableToLay.isArray() &&
+                                	            availableToBack.size() >= 3 && availableToLay.size() >= 3) {
+                                	            JsonNode firstBack = availableToBack.get(0);
+                                	            JsonNode secondBack = availableToBack.get(1);
+                                	            JsonNode thirdBack = availableToBack.get(2);
+                                	            JsonNode firstLay = availableToLay.get(0);
+                                	            JsonNode secondLay = availableToLay.get(1);
+                                	            JsonNode thirdLay = availableToLay.get(2);
+                                	            if (firstBack.has("price") && firstBack.has("size") &&
+                                	                secondBack.has("price") && secondBack.has("size") &&
+                                	                thirdBack.has("price") && thirdBack.has("size") &&
+                                	                firstLay.has("price") && firstLay.has("size") &&
+                                	                secondLay.has("price") && secondLay.has("size") &&
+                                	                thirdLay.has("price") && thirdLay.has("size")) {
+                                	                odds oddsData = new odds();
+                                	                oddsData.b1 = firstBack.get("price").asDouble();
+                                	                oddsData.b2 = secondBack.get("price").asDouble();
+                                	                oddsData.b3 = thirdBack.get("price").asDouble();
+                                	                oddsData.l1 = firstLay.get("price").asDouble();
+                                	                oddsData.l2 = secondLay.get("price").asDouble();
+                                	                oddsData.l3 = thirdLay.get("price").asDouble();
+
+                                	                if (match.getOdds() == null) {
+                                	                    match.setOdds(new ArrayList<>());
+                                	                }
+                                	                if (match.getOdds().isEmpty()) {
+                                	                    match.getOdds().add(oddsData);
+                                	                }
+                                	            }
+                                	        }
+                                	    }
+                                   }
+                              }
+                                	
+                            }
+                        }
+                        matchRepo.save(match);
+                    }
+                }
+            }
+
+            return ResponseEntity.ok(response);
+        }
+
+        
+        
+        @PostMapping("/image")
+        public ResponseEntity<?> uploadImage(@RequestParam("image") MultipartFile file) throws IOException{
+        	
+        	ImageData imageData = new ImageData();
+        	imageData.setName(file.getOriginalFilename());
+        	imageData.setType(file.getContentType());
+        	imageData.setImageData(ImageUtils.compressImage(file.getBytes()));
+        	ImageData save = storageRepo.save(imageData);
+        	if(save!=null) {
+        	return ResponseEntity.status(HttpStatus.OK).body("file uploaded successfully : "+file.getOriginalFilename())  ;
+        	}else {
+        		return null;
+        	}
+        }
+        
+        @GetMapping("/{fileName}")
+        public ResponseEntity<?> downloadImage(@PathVariable String fileName){
+        	Optional<ImageData> imageData = storageRepo.findByName(fileName);
+        	byte[] image =ImageUtils.decompressImage(imageData.get().getImageData());
+        	return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.valueOf("image/png")).body(image);       	
+        }
+
+
+        
 	
 }

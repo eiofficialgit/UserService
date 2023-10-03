@@ -22,5 +22,7 @@ public class UserService2Application {
 	public RestTemplate getRestTemplate() {
 		return new RestTemplate();
 	}
+	
+	
 
 }
