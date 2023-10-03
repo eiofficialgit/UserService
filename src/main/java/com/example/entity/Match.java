@@ -1,6 +1,7 @@
 package com.example.entity;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.data.annotation.Id;
@@ -45,7 +46,7 @@ public class Match {
 	private String type;
 	private int unixDate;
 	private String updatedAt;
-	private int __v;
+	private ArrayList<Object> __v;
 	public String get_id() {
 		return _id;
 	}
@@ -214,12 +215,7 @@ public class Match {
 	public void setUpdatedAt(String updatedAt) {
 		this.updatedAt = updatedAt;
 	}
-	public int get__v() {
-		return __v;
-	}
-	public void set__v(int __v) {
-		this.__v = __v;
-	}
+	
 	
 	
 	
