@@ -3,6 +3,7 @@ package com.example.repository;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -31,14 +32,12 @@ public interface MatchRepo extends MongoRepository<Match, String> {
 
 	List<Match> findByCompetitionName(String competitionname);
 
-	List<Match> findByOpenDateGreaterThanEqual(String todayDate);
+	List<Match> findByOpenDateAfterOrderByOpenDateAsc(String todayDate, Sort sort);
 
-	List<Match> findByOpenDateGreaterThanEqual(String todayDate, Sort sort);
+	List<Match> findBySportIdAndIsActive(String sportid, boolean b);
 
-	List<Match> findByOpenDateGreaterThanEqualOrderByOpenDate(String todayDate, Sort sort);
+	List<Match> findBySportIdAndEventIdAndOpenDateAfter(String sportid, String eventid, String todayDate,
+			Sort sort);
 
-	
-
-	
 
 }

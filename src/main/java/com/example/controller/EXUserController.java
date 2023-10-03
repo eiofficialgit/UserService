@@ -1,3 +1,4 @@
+
 package com.example.controller;
 
 
@@ -1653,7 +1654,8 @@ public class EXUserController {
 	                            matchClose.setMatchid(match.getEventId());
 	                            matchClose.setMatchname(match.getEventName());
 	                            matchClose.setEventDateTime(match.getOpenDate());
-	                            matchClose.setResultIP("AutoMatic");	                            matchClose.setStatus(true);
+	                            matchClose.setResultIP("AutoMatic");
+	                            matchClose.setStatus(true);
 	                            if (matchNode.has("runners") && matchNode.get("runners").isArray()) {
 	                                for (JsonNode runnerNode : matchNode.get("runners")) {
 	                                	if (runnerNode.has("status") && runnerNode.get("status").asText().equals("WINNER")) {
@@ -1769,58 +1771,6 @@ public class EXUserController {
 	    }
 	}
 	    
-	
-
-	@GetMapping("/getsportid/{sportid}")
-	public List<Match> getMatchesBySportId(@PathVariable String sportid) {
-	    SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
-	    String todayDate = dateFormat.format(new Date());
-	    Sort sort = Sort.by(Sort.Direction.ASC, "openDate");
-	    List<Match> matches = matchRepo.findByOpenDateAfterOrderByOpenDateAsc(todayDate, sort);
-
-	    if (sportid != null) {
-	        List<Match> sportMatches = matchRepo.findBySportIdAndIsActive(sportid, true);
-
-	        if (!matches.isEmpty()) {
-	            matches.retainAll(sportMatches);
-	        } else {
-	            matches = sportMatches;
-	        }
-	    }
-
-	    return matches;
-	}
-	
-   
-        @GetMapping("/getByCompetitionName/{competitionname}")
-        public List<Match> getByCompetitionNames(@PathVariable String competitionname) {
-            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
-            String todayDate = dateFormat.format(new Date());
-            List<Match> matches = matchRepo.findByOpenDateGreaterThanEqual(todayDate);
-            
-            if (competitionname != null) {
-                List<Match> competitionMatches = matchRepo.findByCompetitionName(competitionname);
-
-                if (!matches.isEmpty()) {
-                    matches.retainAll(competitionMatches);
-                } else {
-                    matches = competitionMatches;
-                }
-            } 
-            
-            return matches;
-	}
-	
-        
-        
-        @GetMapping("/competitionList/{sportid}")
-        public List<String> getMatchesList(@PathVariable String sportid) {
-        	List<Match> findAll = matchRepo.findBySportId(sportid);
-        	 List<String> uniqueCompetitionNames = findAll.stream().map(Match::getCompetitionName).distinct().collect(Collectors.toList());
-        	 return uniqueCompetitionNames;
-        }
-        
-        
         
         
         @PostMapping("/updateOdds")
@@ -2004,5 +1954,69 @@ public class EXUserController {
 
 
         
+
+	    
+	@GetMapping("/getsportid/{sportid}")
+	public List<Match> getMatchesBySportId(@PathVariable String sportid) {
+        //SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss a");
+	    SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+	    String todayDate = dateFormat.format(new Date());
+	    Sort sort = Sort.by(Sort.Direction.ASC, "openDate");
+	    List<Match> matches = matchRepo.findByOpenDateAfterOrderByOpenDateAsc(todayDate, sort);
+
+	    if (sportid != null) {
+	        List<Match> sportMatches = matchRepo.findBySportIdAndIsActive(sportid, true);
+
+	        if (!matches.isEmpty()) {
+	            matches.retainAll(sportMatches);
+	        } else {
+	            matches = sportMatches;
+	        }
+	    }
+
+	    return matches;
+	}
 	
+   
+        @GetMapping("/getByCompetitionName/{competitionname}")
+        public List<Match> getByCompetitionNames(@PathVariable String competitionname) {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+            String todayDate = dateFormat.format(new Date());
+            List<Match> matches = matchRepo.findByOpenDateGreaterThanEqual(todayDate);
+            
+            if (competitionname != null) {
+                List<Match> competitionMatches = matchRepo.findByCompetitionName(competitionname);
+
+                if (!matches.isEmpty()) {
+                    matches.retainAll(competitionMatches);
+                } else {
+                    matches = competitionMatches;
+                }
+            } 
+            
+            return matches;
+	}
+	
+        
+        
+        @GetMapping("/competitionList/{sportid}")
+        public List<String> getMatchesList(@PathVariable String sportid) {
+        	List<Match> findAll = matchRepo.findBySportId(sportid);
+        	 List<String> uniqueCompetitionNames = findAll.stream().map(Match::getCompetitionName).distinct().collect(Collectors.toList());
+        	 return uniqueCompetitionNames;
+        }
+
+        @GetMapping("/getsportid/{sportid}/{eventid}")
+        public List<Match> getMatchBySportAndEventId(@PathVariable String sportid, @PathVariable String eventid) {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+            String todayDate = dateFormat.format(new Date());
+            Sort sort = Sort.by(Sort.Direction.ASC, "openDate");
+            
+            List<Match> match = matchRepo.findBySportIdAndEventIdAndOpenDateAfter(sportid, eventid, todayDate, sort);
+
+            return match;
+        }
+	
+	
+
 }
