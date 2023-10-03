@@ -14,13 +14,11 @@ public interface MatchRepo extends MongoRepository<Match, String> {
 
 	List<Match> findByisActive(boolean isActive);
 
-	List<Match> findByOpenDateAfterOrderByOpenDateAsc(String todayDate, Sort sort);
+	List<Match> findByOpenDateGreaterThanEqual(String date);
 
 	Match findByMarketId(String marketId);
 
 	List<Match> findBySportId(String sportid);
-	
-	List<Match> findBySportIdAndIsActive(String sportid, boolean isActive);
 
 	List<Match> findBycompetitionId(String competitionId);
 
@@ -32,12 +30,14 @@ public interface MatchRepo extends MongoRepository<Match, String> {
 
 	List<Match> findByCompetitionName(String competitionname);
 
+
 	List<Match> findByOpenDateAfterOrderByOpenDateAsc(String todayDate, Sort sort);
 
 	List<Match> findBySportIdAndIsActive(String sportid, boolean b);
 
 	List<Match> findBySportIdAndEventIdAndOpenDateAfter(String sportid, String eventid, String todayDate,
 			Sort sort);
+
 
 
 }

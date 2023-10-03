@@ -1601,7 +1601,7 @@ public class EXUserController {
                 	Match match = objectMapper.treeToValue(matchNode, Match.class);
                 	Match findByeventId = matchRepo.findByMarketId(match.getMarketId());
             		if(findByeventId == null) {
-            		match.setActive(true);
+            		match.setisActive(true);
                     matchesToSave.add(match);
                 }  
                 }
@@ -1643,8 +1643,8 @@ public class EXUserController {
 	                if (jsonResponse.isArray()) {
 	                    for (JsonNode matchNode : jsonResponse) {
 	                        if (matchNode.has("status") && matchNode.get("status").asText().equals("CLOSED")) {
-	                        	match.setActive(false);
-	                             match.setResult(true);
+	                        	match.setisActive(false);
+	                             match.setisResult(true);
 	                            matchesToSave.add(match);
 	                            MatchClose matchClose = new MatchClose();
 	                            matchClose.setMarketid(match.getEventId());
@@ -1699,12 +1699,12 @@ public class EXUserController {
 	public ResponseEntity<ResponseBean> allSaveMatches(@RequestBody Match match) {
 		Match findByeventId = matchRepo.findByMarketId(match.getMarketId());
 		if(match.isActive()) {
-		findByeventId.setActive(true);
+		findByeventId.setisActive(true);
 		matchRepo.save(findByeventId);
 		ResponseBean reponsebean=ResponseBean.builder().data("MatchEntity").status("success").message(findByeventId.getEventName() +" Active Successfully!!").build();
 	    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 		}else {
-			findByeventId.setActive(false);
+			findByeventId.setisActive(false);
 			matchRepo.save(findByeventId);
 			ResponseBean reponsebean=ResponseBean.builder().data("MatchEntity").status("success").message(findByeventId.getEventName() +" Inactive Successfully!!").build();
 		    return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
@@ -1772,7 +1772,7 @@ public class EXUserController {
 	}
 	    
         
-        
+	    @Scheduled(fixedRate = 300000)
         @PostMapping("/updateOdds")
         public ResponseEntity<String> createPost() throws JsonMappingException, JsonProcessingException {
             List<Match> findAll = matchRepo.findByisActive(true);
