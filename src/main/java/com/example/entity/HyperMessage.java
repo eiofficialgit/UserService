@@ -14,3 +14,4 @@ public class HyperMessage {
 	private String isLock;
 
 }
+

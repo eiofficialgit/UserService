@@ -2,7 +2,9 @@ package com.example.repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import com.example.entity.Match;
@@ -27,6 +29,16 @@ public interface MatchRepo extends MongoRepository<Match, String> {
 
 	List<Match> findByCompetitionName(String competitionname);
 
+
+	List<Match> findByOpenDateAfterOrderByOpenDateAsc(String todayDate, Sort sort);
+
+	List<Match> findBySportIdAndIsActive(String sportid, boolean b);
+
+	List<Match> findBySportIdAndEventIdAndOpenDateAfter(String sportid, String eventid, String todayDate,
+			Sort sort);
+
+	
+	 
 	
 
 }
