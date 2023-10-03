@@ -1,10 +1,13 @@
 package com.example.entity;
 
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.data.annotation.Id;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -46,7 +49,7 @@ public class Match {
 	private String type;
 	private int unixDate;
 	private String updatedAt;
-	private ArrayList<Object> __v;
+	private List<odds> odds;
 	public String get_id() {
 		return _id;
 	}
@@ -216,7 +219,7 @@ public class Match {
 		this.updatedAt = updatedAt;
 	}
 	
-	
+
 	
 	
 	

@@ -1,6 +1,7 @@
 package com.example.repository;
 
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,11 +14,13 @@ public interface MatchRepo extends MongoRepository<Match, String> {
 
 	List<Match> findByisActive(boolean isActive);
 
-	List<Match> findByOpenDateGreaterThanEqual(String date);
+	List<Match> findByOpenDateAfterOrderByOpenDateAsc(String todayDate, Sort sort);
 
-	Match findBymarketId(String marketId);
+	Match findByMarketId(String marketId);
 
 	List<Match> findBySportId(String sportid);
+	
+	List<Match> findBySportIdAndIsActive(String sportid, boolean isActive);
 
 	List<Match> findBycompetitionId(String competitionId);
 
@@ -29,7 +32,6 @@ public interface MatchRepo extends MongoRepository<Match, String> {
 
 	List<Match> findByCompetitionName(String competitionname);
 
-
 	List<Match> findByOpenDateAfterOrderByOpenDateAsc(String todayDate, Sort sort);
 
 	List<Match> findBySportIdAndIsActive(String sportid, boolean b);
@@ -37,8 +39,5 @@ public interface MatchRepo extends MongoRepository<Match, String> {
 	List<Match> findBySportIdAndEventIdAndOpenDateAfter(String sportid, String eventid, String todayDate,
 			Sort sort);
 
-	
-	 
-	
 
 }
