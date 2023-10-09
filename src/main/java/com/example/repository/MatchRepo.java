@@ -35,8 +35,7 @@ public interface MatchRepo extends MongoRepository<Match, String> {
 
 	List<Match> findBySportIdAndIsActive(String sportid, boolean b);
 
-	List<Match> findBySportIdAndEventIdAndOpenDateAfter(String sportid, String eventid, String todayDate,
-			Sort sort);
+	List<Match> findBySportIdAndEventId(String sportid, String eventid);
 
 
 

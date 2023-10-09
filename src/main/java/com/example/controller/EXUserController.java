@@ -2006,16 +2006,14 @@ public class EXUserController {
         	 return uniqueCompetitionNames;
         }
 
-        @GetMapping("/getsportid/{sportid}/{eventid}")
-        public List<Match> getMatchBySportAndEventId(@PathVariable String sportid, @PathVariable String eventid) {
-            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
-            String todayDate = dateFormat.format(new Date());
-            Sort sort = Sort.by(Sort.Direction.ASC, "openDate");
-            
-            List<Match> match = matchRepo.findBySportIdAndEventIdAndOpenDateAfter(sportid, eventid, todayDate, sort);
-
-            return match;
-        }
+        @GetMapping("/getsportid/{sportid}/{eventid}") public List<Match>
+		  getMatchBySportAndEventId(@PathVariable String sportid, @PathVariable String eventid) {
+		  
+		  List<Match> match = matchRepo.findBySportIdAndEventId(sportid, eventid);
+		  
+		  return match;
+		  
+		  }
 	
 	
 
