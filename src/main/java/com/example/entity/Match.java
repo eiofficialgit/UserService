@@ -8,6 +8,8 @@ import java.util.List;
 import org.springframework.data.annotation.Id;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -18,6 +20,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class Match {
 	
 	@Id
@@ -49,7 +52,8 @@ public class Match {
 	private String type;
 	private int unixDate;
 	private String updatedAt;
-	private List<odds> odds;
+	private Odds odds;
+	private int __v;
 	public String get_id() {
 		return _id;
 	}

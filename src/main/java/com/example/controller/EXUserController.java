@@ -2,7 +2,7 @@
 package com.example.controller;
 
 
-import java.io.IOException;
+import java.io.IOException; 
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -31,12 +31,15 @@ import org.springframework.data.domain.Sort;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpEntity;
@@ -57,10 +60,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.entity.ActivityLog;
@@ -78,6 +83,7 @@ import com.example.entity.ImageData;
 import com.example.entity.ImportantMessage;
 import com.example.entity.Match;
 import com.example.entity.MatchClose;
+import com.example.entity.Odds;
 import com.example.entity.Partnership;
 import com.example.entity.ResponseBean;
 import com.example.entity.Runners;
@@ -85,7 +91,6 @@ import com.example.entity.TransactionHistory;
 import com.example.entity.TransactionHistoryResponse;
 import com.example.entity.UserStake;
 import com.example.entity.WebsiteBean;
-import com.example.entity.odds;
 import com.example.repository.ActivityLogRepo;
 import com.example.repository.Authenticaterepo;
 import com.example.repository.CreditReferenceLogRepo;
@@ -104,6 +109,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
@@ -111,6 +117,7 @@ import jakarta.servlet.http.HttpSession;
 @CrossOrigin("*")
 @RequestMapping("/exuser")
 @EnableScheduling
+@EnableCaching
 public class EXUserController {
 
 	@Autowired
@@ -338,7 +345,6 @@ public class EXUserController {
 			}
 			
 		} catch (Exception e) {
-			// TODO: handle exception
 			e.printStackTrace();
 		}
 		responseBean.setData("error");
@@ -354,7 +360,6 @@ public class EXUserController {
 		EXUser child = new EXUser();
 		String encryptPassword = restTemplate.getForObject("http://ENCRYPTDECRYPT-MS/api/encode?encode="+user.getPassword(),String.class);
 		child.setPassword(encryptPassword);
-		WebsiteBean website = new WebsiteBean();
 		try {
 
 			child.setUserName(user.getUserName());
@@ -414,7 +419,6 @@ public class EXUserController {
 
 			child.setPartnership(childPartnership);
 		} catch (Exception e) {
-			// TODO: handle exception
 			e.printStackTrace();
 		}
 		
@@ -489,7 +493,6 @@ public class EXUserController {
 
 			child.setPartnership(childPartnership);
 		} catch (Exception e) {
-			// TODO: handle exception
 			e.printStackTrace();
 		}
 
@@ -565,7 +568,6 @@ public class EXUserController {
 			child.setPartnership(childPartnership);
 			
 		}catch (Exception e) {
-			// TODO: handle exception
 			e.printStackTrace();
 		}
 		
@@ -644,7 +646,6 @@ public class EXUserController {
 			
 			
 		}catch (Exception e) {
-			// TODO: handle exception
 			e.printStackTrace();
 		}
 		
@@ -721,7 +722,6 @@ public class EXUserController {
 			child.setPartnership(childPartnership);
 			
 		}catch (Exception e) {
-			// TODO: handle exception
 			e.printStackTrace();
 		}
 		
@@ -833,7 +833,6 @@ public class EXUserController {
 			child.setAcceptAnySportsBookOdds(false);
 			child.setAcceptAnyBinaryOdds(false);
 		}catch (Exception e) {
-			// TODO: handle exception
 			e.printStackTrace();
 		}
 		
@@ -842,7 +841,8 @@ public class EXUserController {
 	}
 
 
-	
+	@Resource(name ="redisTemplate")
+	private HashOperations<String, String, EXUserData> hashOperations;
 
 	@PostMapping("/managementHome")
 	public ResponseEntity<ResponseBean> managementHome(@RequestBody EncodedPayload payload) {
@@ -861,12 +861,14 @@ public class EXUserController {
 		EXUserData findByUserid = exUserDataRepo.findByUserid(decryptData.getUserid());
 		EXUserData data = new EXUserData();
 		if(findByUserid==null) {
-			data.setIpAddress(httpServletRequest.getRemoteAddr());
+			data.setSessionId(RequestContextHolder.currentRequestAttributes().getSessionId());
 			data.setUserid(decryptData.getUserid());
 			exUserDataRepo.save(data);
-			}else if(!findByUserid.getIpAddress().equals(httpServletRequest.getRemoteAddr())) {
-				ResponseBean reponsebean=ResponseBean.builder().data("ManagementHome").status("Error").message("User Not Authorized!!!").build();
-				return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.UNAUTHORIZED);
+			}else {
+				EXUserData exUserData = exUserDataRepo.findById(findByUserid.getId()).get();
+				exUserData.setSessionId(RequestContextHolder.currentRequestAttributes().getSessionId());
+				exUserDataRepo.save(exUserData);
+				hashOperations.put("EXUserData", exUserData.getId(), exUserData);
 			}
 		
 		if(user==null) {
@@ -874,7 +876,7 @@ public class EXUserController {
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.UNAUTHORIZED);
 		}
 		
-		//user password null or wrong
+		
 		if(!user.getPassword().equals(encryptPassword)) {
 			ResponseBean reponsebean=ResponseBean.builder().data("ManagementHome").status("Error").message("Wrong password!!!").build();
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.UNAUTHORIZED);
@@ -897,6 +899,7 @@ public class EXUserController {
 	    log.setIpAddress(httpServletRequest.getRemoteAddr());
 	    log.setLoginStatus("Login--");
 	    activityLogRepo.save(log);
+	    System.out.println(httpServletRequest.getRequestedSessionId());
 		
 		String  encryptUrl = "http://ENCRYPTDECRYPT-MS/api/encryptPayload";
 		HttpEntity<EXUser> userRequestEntity = new HttpEntity<>(users, headers);
@@ -906,6 +909,28 @@ public class EXUserController {
 		return new ResponseEntity<ResponseBean>(reponsebean, HttpStatus.OK);
 	}
 	
+	
+	@GetMapping(value = "/{key}", consumes = "application/json" )
+	public EXUserData getData(@PathVariable String key) {
+		return hashOperations.get("EXUserData", key);	
+	}
+	
+	
+	@GetMapping("/logout")
+	public ResponseEntity<ResponseBean> logout(HttpServletRequest request){
+		EXUser exUser = (EXUser) httpSession.getAttribute("EXUser");
+		EXUserData user = exUserDataRepo.findByUserid(exUser.getUserid());
+		EXUserData exUserData = hashOperations.get("EXUserData", user.getId());
+		System.out.println(exUserData.getSessionId());
+		if(exUserData.getSessionId().equals(RequestContextHolder.currentRequestAttributes().getSessionId())) {
+			return ResponseEntity.ok(new ResponseBean("success", " user still loggedIn!!", "ManagementHome"));
+		   }else {
+			HttpSession session = request.getSession(false);
+			session.invalidate();
+			return ResponseEntity.ok(new ResponseBean("success", "Logout Successfully!!", "ManagementHome"));
+		  }
+
+	}
 	
 	
 	
@@ -1148,19 +1173,6 @@ public class EXUserController {
 	    for (EXUser childUser : childUsers) {
 	    	activeUserAndDescendants(childUser);
 	    }
-	}
-	
-
-	
-	
-	
-	@GetMapping("/logout")
-	public ResponseEntity<ResponseBean> logout(HttpServletRequest request){
-		HttpSession session = request.getSession(false);
-		 if (session != null) {
-	            session.invalidate();
-	     }
-		 return ResponseEntity.ok(new ResponseBean("success", "Logout Successfully!!", "ManagementHome"));
 	}
 	
 	
@@ -1785,65 +1797,122 @@ public class EXUserController {
             ObjectMapper objectMapper = new ObjectMapper();
 
             for (Match match : findAll) {
-                String marketId = match.getMarketId();
-                String postJson = "{\"marketIds\": \"" + marketId + "\"}";
-
+                String marketId = match.getMarketId();                String postJson = "{\"marketIds\": \"" + marketId + "\"}";
                 HttpEntity<String> requestEntity = new HttpEntity<>(postJson, headers);
                 ResponseEntity<String> responseEntity = restTemplate.postForEntity(apiUrl, requestEntity, String.class);
                 String response = responseEntity.getBody();
 
                 if (response != null) {
                     JsonNode jsonResponse = objectMapper.readTree(response);
+                    Odds oddsData = new Odds();
                     if (jsonResponse.has(marketId)) {
                         JsonNode marketNode = jsonResponse.get(marketId);
+                        
                         if (marketNode.has("tiger") && marketNode.get("tiger").isArray()) {
                             JsonNode tigerArray = marketNode.get("tiger");
                             for (JsonNode tigerItem : tigerArray) {
                                 if (tigerItem.has("runners") && tigerItem.get("runners").isArray()) {
                                     JsonNode runnersArray = tigerItem.get("runners");
-                                    for (JsonNode runner : runnersArray) {
-                                        if (runner.has("ex")) {
-                                            JsonNode exArray = runner.get("ex");
-                                            if (exArray.has("availableToBack") && exArray.has("availableToLay")) {
-                                                JsonNode availableToBack = exArray.get("availableToBack");
-                                                JsonNode availableToLay = exArray.get("availableToLay");
-                                                if (availableToBack.isArray() && availableToLay.isArray() &&
-                                                    availableToBack.size() >= 3 && availableToLay.size() >= 3) {
-                                                    JsonNode firstBack = availableToBack.get(0);
-                                                    JsonNode secondBack = availableToBack.get(1);
-                                                    JsonNode thirdBack = availableToBack.get(2);
-                                                    JsonNode firstLay = availableToLay.get(0);
-                                                    JsonNode secondLay = availableToLay.get(1);
-                                                    JsonNode thirdLay = availableToLay.get(2);
-                                                    if (firstBack.has("price") && firstBack.has("size") &&
-                                                        secondBack.has("price") && secondBack.has("size") &&
-                                                        thirdBack.has("price") && thirdBack.has("size") &&
-                                                        firstLay.has("price") && firstLay.has("size") &&
-                                                        secondLay.has("price") && secondLay.has("size") &&
-                                                        thirdLay.has("price") && thirdLay.has("size")) {
-                                                        odds oddsData = new odds();
-                                                        oddsData.b1 = firstBack.get("price").asDouble();
-                                                        oddsData.b2 = secondBack.get("price").asDouble();
-                                                        oddsData.b3 = thirdBack.get("price").asDouble();
-                                                        oddsData.l1 = firstLay.get("price").asDouble();
-                                                        oddsData.l2 = secondLay.get("price").asDouble();
-                                                        oddsData.l3 = thirdLay.get("price").asDouble();
-
-                                                        if (match.getOdds() == null) {
-                                                            match.setOdds(new ArrayList<>());
-                                                        }
-                                                        if (match.getOdds().isEmpty()) {
-                                                            match.getOdds().add(oddsData);
-                                                        }
+                                       JsonNode firstRunner = runnersArray.get(0);
+                                        if(firstRunner.has("selectionId")) {
+                                            int selectionId = firstRunner.get("selectionId").asInt();
+                               		              for (Runners runner : match.getMatchRunners()) {
+    			                                       if (runner.getSelectionId() == selectionId) {
+    			                                    	   if(firstRunner.has("ex")) {
+    			                                    		   JsonNode exArray = firstRunner.get("ex");
+    			                                    		   if (exArray.has("availableToBack") && exArray.has("availableToLay")) {
+    			                                       	        JsonNode availableToBack = exArray.get("availableToBack");
+    			                                       	        JsonNode availableToLay = exArray.get("availableToLay");
+    			                                       	        if (availableToBack.isArray() && availableToLay.isArray() &&
+    			                                       	            availableToBack.size() >= 3 && availableToLay.size() >= 3) {
+    			                                        	        if (availableToBack.isArray() && availableToLay.isArray() &&
+    			                                            	            availableToBack.size() >= 3 && availableToLay.size() >= 3) {
+    			                                            	            JsonNode firstBack = availableToBack.get(0);
+    			                                            	            JsonNode firstLay = availableToLay.get(0);
+    			                                            	            if (firstBack.has("price") && firstBack.has("size") &&
+    			                                            	                firstLay.has("price") && firstLay.has("size")) {
+//    			                                            	                oddsData.setB1(firstBack.get("price").asDouble()); 
+//    			                                            	                oddsData.setL1(firstLay.get("price").asDouble());
+    			                                            	                oddsData.b1 = firstBack.get("price").asDouble();
+    			                                            	                oddsData.l1 = firstLay.get("price").asDouble();
+    			                                            	             }
+    			                                       	          }
+    			                                       	        }
+    			                                       }
                                                     }
-                                                }
-                                            }
+                                               }
+                                           }
+                                        
+                                        JsonNode secondRunner = runnersArray.get(1);
+                                        if(secondRunner.has("selectionId")) {
+                                            int selectionIds = secondRunner.get("selectionId").asInt();
+                               		              for (Runners runner : match.getMatchRunners()) {
+    			                                       if (runner.getSelectionId() == selectionIds) {
+    			                                    	   if(secondRunner.has("ex")) {
+    			                                    		   JsonNode exArray = secondRunner.get("ex");
+    			                                    		   if (exArray.has("availableToBack") && exArray.has("availableToLay")) {
+    			                                       	        JsonNode availableToBack = exArray.get("availableToBack");
+    			                                       	        JsonNode availableToLay = exArray.get("availableToLay");
+    			                                       	        if (availableToBack.isArray() && availableToLay.isArray() &&
+    			                                       	            availableToBack.size() >= 3 && availableToLay.size() >= 3) {
+    			                                        	        if (availableToBack.isArray() && availableToLay.isArray() &&
+    			                                            	            availableToBack.size() >= 3 && availableToLay.size() >= 3) {
+    			                                            	            JsonNode thirdBack = availableToBack.get(2);
+    			                                            	            JsonNode thirdLay = availableToLay.get(2);
+    			                                            	            if (thirdBack.has("price") && thirdBack.has("size") &&
+    			                                            	            		thirdLay.has("price") && thirdLay.has("size")) {
+//    			                                            	                oddsData.setB3(thirdBack.get("price").asDouble());
+//    			                                            	                oddsData.setL3(thirdLay.get("price").asDouble());
+    			                                            	                oddsData.b3 = thirdBack.get("price").asDouble();
+    			                                            	                oddsData.l3 = thirdLay.get("price").asDouble();
+    			                                            	             }
+    			                                        	        }
+    			                                       	          }
+    			                                       	        }
+    			                                       }
+                                                    }
+                                               }
+                                           }
+                                        JsonNode thirdRunner = runnersArray.get(2);
+                                        if(thirdRunner!=null) {
+                                        if(thirdRunner.has("selectionId")) {
+                                            int selectionIds = thirdRunner.get("selectionId").asInt();
+                               		              for (Runners runner : match.getMatchRunners()) {
+    			                                       if (runner.getSelectionId() == selectionIds) {
+    			                                    	   if(thirdRunner.has("ex")) {
+    			                                    		   JsonNode exArray = thirdRunner.get("ex");
+    			                                    		   if (exArray.has("availableToBack") && exArray.has("availableToLay")) {
+    			                                       	        JsonNode availableToBack = exArray.get("availableToBack");
+    			                                       	        JsonNode availableToLay = exArray.get("availableToLay");
+    			                                       	        if (availableToBack.isArray() && availableToLay.isArray() &&
+    			                                       	            availableToBack.size() >= 3 && availableToLay.size() >= 3) {
+    			                                        	        if (availableToBack.isArray() && availableToLay.isArray() &&
+    			                                            	            availableToBack.size() >= 3 && availableToLay.size() >= 3) {
+    			                                            	            JsonNode secondBack = availableToBack.get(1);
+    			                                            	            JsonNode secondLay = availableToLay.get(1);
+    			                                            	            if (secondBack.has("price") && secondBack.has("size") &&
+    			                                            	            		secondLay.has("price") && secondLay.has("size")) {
+//    			                                            	                oddsData.setB2(secondBack.get("price").asDouble());
+//    			                                            	                oddsData.setL2(secondLay.get("price").asDouble()); 
+    			                                            	                oddsData.b2 = secondBack.get("price").asDouble();
+    			                                            	                oddsData.l2 = secondLay.get("price").asDouble();
+    			                                            	              }
+    			                                        	        }
+    			                                       	          }
+    			                                       	        }
+    			                                       }
+                                                    }
+                                               }
+                                           }
                                         }
-                                    }
-                                }
+                                        }
+                                   }
                             }
+                                match.setOdds(oddsData);
+                                
                             matchRepo.save(match);
                         }
+                        
                     }
                 }
             }
@@ -1871,6 +1940,7 @@ public class EXUserController {
 
             if (response != null) {
                 JsonNode jsonResponse = objectMapper.readTree(response);
+                Odds oddsData = new Odds();
                 if (jsonResponse.has(marketIds)) {
                     JsonNode marketNode = jsonResponse.get(marketIds);
                     if (marketNode.has("tiger") && marketNode.get("tiger").isArray()) {
@@ -1878,48 +1948,106 @@ public class EXUserController {
                         for (JsonNode tigerItem : tigerArray) {
                             if (tigerItem.has("runners") && tigerItem.get("runners").isArray()) {
                                 JsonNode runnersArray = tigerItem.get("runners");
-                                for (JsonNode runner : runnersArray) {
-                                	if(runner.has("ex")) {
-                                		JsonNode exArray = runner.get("ex");
-                                		if (exArray.has("availableToBack") && exArray.has("availableToLay")) {
-                                	        JsonNode availableToBack = exArray.get("availableToBack");
-                                	        JsonNode availableToLay = exArray.get("availableToLay");
-                                	        if (availableToBack.isArray() && availableToLay.isArray() &&
-                                	            availableToBack.size() >= 3 && availableToLay.size() >= 3) {
-                                	            JsonNode firstBack = availableToBack.get(0);
-                                	            JsonNode secondBack = availableToBack.get(1);
-                                	            JsonNode thirdBack = availableToBack.get(2);
-                                	            JsonNode firstLay = availableToLay.get(0);
-                                	            JsonNode secondLay = availableToLay.get(1);
-                                	            JsonNode thirdLay = availableToLay.get(2);
-                                	            if (firstBack.has("price") && firstBack.has("size") &&
-                                	                secondBack.has("price") && secondBack.has("size") &&
-                                	                thirdBack.has("price") && thirdBack.has("size") &&
-                                	                firstLay.has("price") && firstLay.has("size") &&
-                                	                secondLay.has("price") && secondLay.has("size") &&
-                                	                thirdLay.has("price") && thirdLay.has("size")) {
-                                	                odds oddsData = new odds();
-                                	                oddsData.b1 = firstBack.get("price").asDouble();
-                                	                oddsData.b2 = secondBack.get("price").asDouble();
-                                	                oddsData.b3 = thirdBack.get("price").asDouble();
-                                	                oddsData.l1 = firstLay.get("price").asDouble();
-                                	                oddsData.l2 = secondLay.get("price").asDouble();
-                                	                oddsData.l3 = thirdLay.get("price").asDouble();
-
-                                	                if (match.getOdds() == null) {
-                                	                    match.setOdds(new ArrayList<>());
-                                	                }
-                                	                if (match.getOdds().isEmpty()) {
-                                	                    match.getOdds().add(oddsData);
-                                	                }
-                                	            }
-                                	        }
-                                	    }
-                                   }
-                              }
-                                	
-                            }
+                                   JsonNode firstRunner = runnersArray.get(0);
+                                    if(firstRunner.has("selectionId")) {
+                                        int selectionId = firstRunner.get("selectionId").asInt();
+                           		              for (Runners runner : match.getMatchRunners()) {
+			                                       if (runner.getSelectionId() == selectionId) {
+			                                    	   if(firstRunner.has("ex")) {
+			                                    		   JsonNode exArray = firstRunner.get("ex");
+			                                    		   if (exArray.has("availableToBack") && exArray.has("availableToLay")) {
+			                                       	        JsonNode availableToBack = exArray.get("availableToBack");
+			                                       	        JsonNode availableToLay = exArray.get("availableToLay");
+			                                       	        if (availableToBack.isArray() && availableToLay.isArray() &&
+			                                       	            availableToBack.size() >= 3 && availableToLay.size() >= 3) {
+			                                        	        if (availableToBack.isArray() && availableToLay.isArray() &&
+			                                            	            availableToBack.size() >= 3 && availableToLay.size() >= 3) {
+			                                            	            JsonNode firstBack = availableToBack.get(0);
+			                                            	            JsonNode firstLay = availableToLay.get(0);
+			                                            	            if (firstBack.has("price") && firstBack.has("size") &&
+			                                            	                firstLay.has("price") && firstLay.has("size")) {
+			                                            	               
+			                                            	                oddsData.b1 = firstBack.get("price").asDouble();
+			                                            	                oddsData.l1 = firstLay.get("price").asDouble();
+			                                            	                
+			                                        	        }
+			                                       	          }
+			                                       	        }
+			                                       }
+                                                }
+                                           }
+                                       }
+                                    
+                                    JsonNode secondRunner = runnersArray.get(1);
+                                    if(secondRunner.has("selectionId")) {
+                                        int selectionIds = secondRunner.get("selectionId").asInt();
+                           		              for (Runners runner : match.getMatchRunners()) {
+			                                       if (runner.getSelectionId() == selectionIds) {
+			                                    	   if(secondRunner.has("ex")) {
+			                                    		   JsonNode exArray = secondRunner.get("ex");
+			                                    		   if (exArray.has("availableToBack") && exArray.has("availableToLay")) {
+			                                       	        JsonNode availableToBack = exArray.get("availableToBack");
+			                                       	        JsonNode availableToLay = exArray.get("availableToLay");
+			                                       	        if (availableToBack.isArray() && availableToLay.isArray() &&
+			                                       	            availableToBack.size() >= 3 && availableToLay.size() >= 3) {
+			                                        	        if (availableToBack.isArray() && availableToLay.isArray() &&
+			                                            	            availableToBack.size() >= 3 && availableToLay.size() >= 3) {
+			                                            	            JsonNode thirdBack = availableToBack.get(0);
+			                                            	            JsonNode thirdLay = availableToLay.get(0);
+			                                            	            if (thirdBack.has("price") && thirdBack.has("size") &&
+			                                            	            		thirdLay.has("price") && thirdLay.has("size")) {
+			                                            	                
+			                                            	                oddsData.b3 = thirdBack.get("price").asDouble();
+			                                            	                oddsData.l3 = thirdLay.get("price").asDouble();
+			                                            	            }
+			                                        	        }
+			                                       	          }
+			                                       	        }
+			                                       }
+                                                }
+                                           }
+                                       }
+                                    JsonNode thirdRunner = runnersArray.get(2);
+                                    if(thirdRunner!=null) {
+                                    if(thirdRunner.has("selectionId")) {
+                                        int selectionIds = thirdRunner.get("selectionId").asInt();
+                           		              for (Runners runner : match.getMatchRunners()) {
+			                                       if (runner.getSelectionId() == selectionIds) {
+			                                    	   if(thirdRunner.has("ex")) {
+			                                    		   JsonNode exArray = thirdRunner.get("ex");
+			                                    		   if (exArray.has("availableToBack") && exArray.has("availableToLay")) {
+			                                       	        JsonNode availableToBack = exArray.get("availableToBack");
+			                                       	        JsonNode availableToLay = exArray.get("availableToLay");
+			                                       	        if (availableToBack.isArray() && availableToLay.isArray() &&
+			                                       	            availableToBack.size() >= 3 && availableToLay.size() >= 3) {
+			                                        	        if (availableToBack.isArray() && availableToLay.isArray() &&
+			                                            	            availableToBack.size() >= 3 && availableToLay.size() >= 3) {
+			                                            	            JsonNode secondBack = availableToBack.get(0);
+			                                            	            JsonNode secondLay = availableToLay.get(0);
+			                                            	            if (secondBack.has("price") && secondBack.has("size") &&
+			                                            	            		secondLay.has("price") && secondLay.has("size")) {
+			                                            	                
+			                                            	                oddsData.b2 = secondBack.get("price").asDouble();
+			                                            	                oddsData.l2 = secondLay.get("price").asDouble();
+			                                            	            }
+			                                        	        }
+			                                       	          }
+			                                       	        }
+			                                       }
+                                                }
+                                           }
+                                       }
+                                    }
+                                    }
+                               }
                         }
+//                            if (match.getOdds() == null) {
+//                                match.setOdds(new ArrayList<>());
+//                            }
+
+//                            match.getOdds().add(oddsData);
+                        match.setOdds(oddsData);
+                            
                         matchRepo.save(match);
                     }
                 }
@@ -2016,7 +2144,10 @@ public class EXUserController {
 
             return match;
         }
-	
+        
+        
+        
+        
 	
 
 }

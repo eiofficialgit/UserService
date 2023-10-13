@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class odds {
+public class Odds {
 	
 	public double b1;
 	public double b2;
